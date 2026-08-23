@@ -29,8 +29,21 @@ const getSinglePromt = async (req, res) => {
     }
 }
 
+const postAddPromt = async (req, res) => {
+    try {
+        const newPrompt = req.body;
+
+        const result = await allPromtsCollection.insertOne(newPrompt);
+        res.status(201).json({ success: true, message: "Prompt added successfully", promptId: result.insertedId });
+    } catch (error) {
+        console.error("Error adding prompt:", error);
+        res.status(500).json({ success: false, message: "Failed to add prompt", error: error.message });
+    }
+}
+
 
 module.exports = {
     getAllpromts,
-    getSinglePromt
+    getSinglePromt,
+    postAddPromt
 }

@@ -81,11 +81,10 @@ const Sidebar = () => {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                  isActive
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${isActive
                     ? "bg-primary text-white font-semibold shadow-md shadow-primary/20"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                }`}
+                  }`}
               >
                 {Icon && <Icon className="h-4 w-4 shrink-0" />}
                 <span>{item.name}</span>

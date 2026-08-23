@@ -6,6 +6,7 @@ import PromptHeader from "./PromptHeader";
 import PromptForm from "./PromptForm";
 import PromptPreviewCard from "./PromptPreviewCard";
 import { PRESET_THUMBNAILS } from "./promptConstants";
+import { addNewPromt } from "@/lib/actions/promts/addpromts";
 
 export default function Addpromts() {
   const session = getClientSession();
@@ -84,7 +85,7 @@ export default function Addpromts() {
       createdAt: new Date().toISOString(),
     };
 
-    console.log("Submitting New Prompt Payload:", payload);
+    const result = await addNewPromt(payload);
 
     setTimeout(() => {
       setIsSubmitting(false);
