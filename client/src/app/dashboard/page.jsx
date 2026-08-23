@@ -1,16 +1,28 @@
 import React from 'react';
+import { getServerSession } from '@/lib/authentication/server.session';
+import UserDashboardAnalytics from '@/components/dashboard/user/DashboardAnalytics/DashboardAnalytics';
+import CreatorDashboardAnalytics from '@/components/dashboard/creator/DashboardAnalytics/DashboardAnalytics';
+import AdminDashboardAnalytics from '@/components/dashboard/admin/DashboardAnalytics/DashboardAnalytics';
 
-const DashboardHomePage = () => {
-    return (
-        <div className="rounded-2xl border border-border/80 bg-card/80 p-6 sm:p-8 backdrop-blur-xl shadow-xs">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Dashboard Overview
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-                Welcome to your dashboard. Select a section from the sidebar to manage your prompts, view analytics, and settings.
-            </p>
-        </div>
-    );
+export const metadata = {
+  title: 'Dashboard Overview | PromptMatrix',
+  description: 'Manage your AI prompts, track real-time analytics, and explore prompt performance.',
+};
+
+const DashboardHomePage = async () => {
+  const session = await getServerSession();
+  const userType = session?.user?.userType || 'user';
+
+  // Render role-specific analytical reports based on session userType
+  if (userType === 'admin') {
+    return <AdminDashboardAnalytics session={session} />;
+  }
+
+  if (userType === 'creator') {
+    return <CreatorDashboardAnalytics session={session} />;
+  }
+
+  return <UserDashboardAnalytics session={session} />;
 };
 
 export default DashboardHomePage;
