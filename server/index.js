@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const { client, connectDB } = require('./config/db.js');
 const allpromtsRoutes = require('./routes/allpromtsRoutes.js');
+const DashboardRoutes = require("./routes/DashboardRoutes.js")
 // Load environment variables
 dotenv.config();
 
@@ -20,7 +21,10 @@ connectDB();
 // Routes
 
 
-app.use("/api/allpromts", allpromtsRoutes)
+app.use("/api/allpromts", allpromtsRoutes);
+
+app.use("/api/dashboard", DashboardRoutes);
+
 
 
 const PORT = process.env.PORT || 5000;

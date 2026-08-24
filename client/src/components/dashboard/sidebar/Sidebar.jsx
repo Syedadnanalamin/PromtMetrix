@@ -23,7 +23,7 @@ const Links = {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Add Prompt", href: "/dashboard/add-prompt", icon: PlusCircle },
     { name: "My Prompts", href: "/dashboard/my-prompts", icon: FolderKanban },
-    { name: "Saved Prompts", href: "/dashboard/saved", icon: Bookmark },
+    { name: "Saved Prompts", href: "/dashboard/savedpromts", icon: Bookmark },
     { name: "My Reviews", href: "/dashboard/my-reviews", icon: MessageSquare },
     { name: "Profile", href: "/dashboard/profile", icon: User },
   ],
@@ -82,8 +82,8 @@ const Sidebar = () => {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${isActive
-                    ? "bg-primary text-white font-semibold shadow-md shadow-primary/20"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-primary text-white font-semibold shadow-md shadow-primary/20"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
                   }`}
               >
                 {Icon && <Icon className="h-4 w-4 shrink-0" />}
