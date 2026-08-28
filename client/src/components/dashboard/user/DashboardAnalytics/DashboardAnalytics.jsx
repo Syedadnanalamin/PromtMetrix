@@ -22,11 +22,16 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-export default function UserDashboardAnalytics({ session }) {
+export default function UserDashboardAnalytics({ session, analytics }) {
   const user = session?.user;
   const userName = user?.name || "Prompt Explorer";
   const userEmail = user?.email || "";
   const isPremium = user?.isPremium || false;
+
+  const myPromptsCount = analytics?.myPromts ?? 0;
+  const savedPromptsCount = analytics?.savedPromts ?? 0;
+  const reviewsGivenCount = analytics?.reviewsGiven ?? 0;
+  const totalCopiesCount = analytics?.totalCopiesPromts ?? 0;
 
   // Mock user dashboard metrics (aligned with platform specs)
   const [activeTab, setActiveTab] = useState("recent");
@@ -34,37 +39,53 @@ export default function UserDashboardAnalytics({ session }) {
   const stats = [
     {
       title: "My Prompts",
-      value: "1",
-      subtext: isPremium ? "Unlimited submissions" : "1 of 3 free prompts used",
+      value: myPromptsCount,
+      subtext: isPremium
+        ? "Unlimited submissions"
+        : `${myPromptsCount} of 3 free prompts used`,
       icon: FolderKanban,
-      trend: isPremium ? "Pro Tier" : "33% Quota",
+      trend: isPremium
+        ? "Pro Tier"
+        : `${Math.min(100, Math.round((myPromptsCount / 3) * 100))}% Quota`,
       color: "from-violet-500/20 to-purple-500/20 text-primary border-primary/20",
       link: "/dashboard/my-prompts",
     },
     {
       title: "Saved Prompts",
-      value: "8",
-      subtext: "Bookmarks in collection",
+      value: savedPromptsCount,
+      subtext:
+        savedPromptsCount === 1
+          ? "1 bookmark in collection"
+          : `${savedPromptsCount} bookmarks in collection`,
       icon: Bookmark,
-      trend: "+3 this week",
+      trend: savedPromptsCount > 0 ? "Saved collection" : "No bookmarks",
       color: "from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/20",
-      link: "/dashboard/saved",
+      link: "/dashboard/savedpromts",
     },
     {
       title: "Reviews Given",
-      value: "4",
-      subtext: "Community ratings submitted",
+      value: reviewsGivenCount,
+      subtext:
+        reviewsGivenCount === 1
+          ? "1 community review"
+          : `${reviewsGivenCount} community reviews`,
       icon: MessageSquare,
-      trend: "4.8 avg rating",
+      trend: reviewsGivenCount > 0 ? "Active reviewer" : "No reviews",
       color: "from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/20",
       link: "/dashboard/my-reviews",
     },
     {
       title: "Total Copies",
-      value: "26",
-      subtext: "Prompts executed",
+      value: totalCopiesCount,
+      subtext:
+        totalCopiesCount === 1
+          ? "1 prompt executed"
+          : `${totalCopiesCount} prompts executed`,
       icon: Copy,
-      trend: "~4.5 hrs saved",
+      trend:
+        totalCopiesCount > 0
+          ? `~${(totalCopiesCount * 0.25).toFixed(1)} hrs saved`
+          : "0 hrs saved",
       color: "from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/20",
       link: "/allpromts",
     },
@@ -255,7 +276,7 @@ export default function UserDashboardAnalytics({ session }) {
               </div>
 
               <Link
-                href={activeTab === "recent" ? "/dashboard/saved" : "/dashboard/my-prompts"}
+                href={activeTab === "recent" ? "/dashboard/savedpromts" : "/dashboard/my-prompts"}
                 className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
               >
                 View all <ChevronRight className="h-3.5 w-3.5" />

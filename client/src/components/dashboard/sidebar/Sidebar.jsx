@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { getClientSession } from '@/lib/authentication/client-session';
 import {
   LayoutDashboard,
   PlusCircle,
@@ -45,12 +44,11 @@ const Links = {
   ],
 };
 
-const Sidebar = () => {
+const Sidebar = ({ session }) => {
   const pathname = usePathname();
-  const userSession = getClientSession();
 
   // Get userType string ("user" | "creator" | "admin")
-  const userType = userSession?.user?.userType || "user";
+  const userType = session?.user?.userType || "user";
 
   // Access matching links array using bracket notation
   const sidebarLinks = Links[userType] || Links.user;
@@ -62,7 +60,7 @@ const Sidebar = () => {
         <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60">
           <p className="text-xs text-muted-foreground">Logged in as</p>
           <p className="text-sm font-bold text-foreground truncate">
-            {userSession?.user?.name || "User"}
+            {session?.user?.name || "User"}
           </p>
           <div className="mt-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-primary/15 text-primary capitalize border border-primary/20">

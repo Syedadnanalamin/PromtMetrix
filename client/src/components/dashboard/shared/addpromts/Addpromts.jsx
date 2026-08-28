@@ -87,11 +87,15 @@ export default function Addpromts() {
 
     const result = await addNewPromt(payload);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    if (result?.success) {
+      toast.success("Prompt added successfully");
       setSubmittedTitle(formData.title);
       setSubmittedSuccess(true);
-    }, 900);
+    } else {
+      toast.error("Failed to add prompt");
+    }
+
+    setIsSubmitting(false);
   };
 
   // Reset Handler

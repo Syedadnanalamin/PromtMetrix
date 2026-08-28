@@ -24,6 +24,9 @@ const connectDB = async () => {
 const db = client.db("AiPromts");
 const allPromtsCollection = db.collection("allPromts");
 const savedpromts = db.collection("savedPromts");
+const reviewsCollection = db.collection("reviews");
+const copiesCollection = db.collection("promptCopies");
+
 
 
 
@@ -35,5 +38,7 @@ module.exports = {
   connectDB,
   client,
   allPromtsCollection,
-  savedpromts
+  savedpromts,
+  reviewsCollection,
+  copiesCollection
 };

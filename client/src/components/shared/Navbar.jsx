@@ -35,13 +35,14 @@ const navLinks = [
 
 ];
 
-export default function Navbar() {
+export default function Navbar({ session: initialSession }) {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileRef = useRef(null);
 
-  const session = getClientSession();
+  const clientSession = getClientSession();
+  const session = clientSession?.user ? clientSession : initialSession;
   const isLoggedIn = !!session?.user;
   const user = session?.user;
 
@@ -141,7 +142,7 @@ export default function Navbar() {
           ) : (
             <div className="flex items-center gap-3">
               {/* Saved Prompts Icon */}
-              <Link href="/dashboard/saved">
+              <Link href="/dashboard/savedpromts">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -235,7 +236,7 @@ export default function Navbar() {
                       </Link>
 
                       <Link
-                        href="/dashboard/saved"
+                        href="/dashboard/savedpromts"
                         onClick={() => setProfileDropdownOpen(false)}
                         className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent"
                       >
@@ -336,7 +337,7 @@ export default function Navbar() {
                     Dashboard
                   </Button>
                 </Link>
-                <Link href="/dashboard/saved" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/dashboard/savedpromts" onClick={() => setMobileMenuOpen(false)}>
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <Bookmark className="h-4 w-4 text-primary" />
                     Saved Prompts

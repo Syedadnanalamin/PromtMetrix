@@ -1,4 +1,25 @@
-const { savedpromts } = require("../config/db");
+const { allPromtsCollection, savedpromts, reviewsCollection, copiesCollection } = require("../config/db");
+
+
+const getUserDashboardAnalytics = async (req, res) => {
+    const userId = req.params.id;
+
+    const [myPromts, savedPromts, reviewsGiven, totalCopiesPromts] = await Promise.all([
+        allPromtsCollection.countDocuments({ userId }),
+        savedpromts.countDocuments({ userId }),
+        reviewsCollection.countDocuments({ userId }),
+        copiesCollection.countDocuments({ userId }),
+
+    ]);
+
+    res.status(200).json({ success: true, data: { myPromts, savedPromts, reviewsGiven, totalCopiesPromts } });
+
+
+}
+
+
+
+
 const postSavedPromts = async (req, res) => {
 
     const data = req.body;
@@ -20,5 +41,6 @@ const postSavedPromts = async (req, res) => {
 
 module.exports = {
 
-    postSavedPromts
+    postSavedPromts,
+    getUserDashboardAnalytics
 }
