@@ -28,6 +28,8 @@ export default function UserDashboardAnalytics({ session, analytics }) {
   const userEmail = user?.email || "";
   const isPremium = user?.isPremium || false;
 
+  console.log("this is the analytics upcoming data console", analytics);
+
   const myPromptsCount = analytics?.myPromts ?? 0;
   const savedPromptsCount = analytics?.savedPromts ?? 0;
   const reviewsGivenCount = analytics?.reviewsGiven ?? 0;
@@ -254,22 +256,20 @@ export default function UserDashboardAnalytics({ session, analytics }) {
                 <button
                   type="button"
                   onClick={() => setActiveTab("recent")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    activeTab === "recent"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "recent"
                       ? "bg-primary text-primary-foreground shadow-xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   Saved Prompts (Bookmarks)
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab("submissions")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    activeTab === "submissions"
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "submissions"
                       ? "bg-primary text-primary-foreground shadow-xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   My Submissions
                 </button>

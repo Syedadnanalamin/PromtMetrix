@@ -1,5 +1,5 @@
 const { ObjectId } = require("mongodb");
-const { allPromtsCollection } = require("../config/db.js");
+const { allPromtsCollection, reviewsCollection } = require("../config/db.js");
 
 const getAllpromts = async (req, res) => {
 
@@ -42,8 +42,21 @@ const postAddPromt = async (req, res) => {
 }
 
 
+const postPromtReviews = async (req, res) => {
+    try {
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.status(201).json({ success: true, message: "Review added successfully", reviewId: result.insertedId });
+    } catch (error) {
+        console.error("Error adding review:", error);
+        res.status(500).json({ success: false, message: "Failed to add review", error: error.message });
+    }
+}
+
+
 module.exports = {
     getAllpromts,
     getSinglePromt,
-    postAddPromt
+    postAddPromt,
+    postPromtReviews
 }
