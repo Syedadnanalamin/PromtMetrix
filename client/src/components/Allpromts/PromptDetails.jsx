@@ -28,6 +28,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getClientSession } from "@/lib/authentication/client-session";
 import { savePromts } from "@/lib/actions/promts/savePromts";
 import { promtsReviews } from "@/lib/api/promts/promtsReviews";
+import { saveCopycount } from "@/lib/actions/promts/saveCopycount";
 
 // Difficulty badge color lookup
 const difficultyColors = {
@@ -36,12 +37,13 @@ const difficultyColors = {
   pro: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
-export default function PromptDetails({ details, session: serverSession }) {
+export default function PromptDetails({ details, session: serverSession, promtid }) {
   const router = useRouter();
   const clientSession = getClientSession();
   const session = serverSession || clientSession;
   const user = session?.user;
   const isLoggedIn = !!user;
+
 
   // States
   const [copied, setCopied] = useState(false);
@@ -79,9 +81,8 @@ export default function PromptDetails({ details, session: serverSession }) {
   const isPrivate = details?.visibility?.toLowerCase() === "private";
   const isPremiumUser = user?.subscription === "premium" || user?.role === "admin";
   const isLocked = isPrivate && !isPremiumUser;
-
   // Handle Copy Prompt
-  const handleCopyPrompt = () => {
+  const handleCopyPrompt = async () => {
     if (isLocked) {
       router.push("/subscribe");
       return;
@@ -93,6 +94,20 @@ export default function PromptDetails({ details, session: serverSession }) {
     setCopied(true);
     setCopyCount((prev) => prev + 1);
     setTimeout(() => setCopied(false), 2000);
+
+
+    // saving copypromts details by posting method while clicking copy promts
+    const data = {
+
+      userId: user.id,
+      promptId: promtid
+    }
+
+
+    const result = await saveCopycount(data);
+    console.log(result);
+    console.log("object ", data);
+
   };
 
   // Handle Bookmark Toggle

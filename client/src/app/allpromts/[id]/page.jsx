@@ -8,7 +8,7 @@ const Page = async ({ params }) => {
     const details = await getSinglePromt(id);
     const session = await getServerSession();
 
-    return <PromptDetails details={details} session={session} />;
+    return <PromptDetails details={details} session={session} promtid={id} />;
 };
 
 export default Page;

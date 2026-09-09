@@ -1,5 +1,5 @@
 const { ObjectId } = require("mongodb");
-const { allPromtsCollection, reviewsCollection } = require("../config/db.js");
+const { allPromtsCollection, reviewsCollection, copiesCollection } = require("../config/db.js");
 
 const getAllpromts = async (req, res) => {
 
@@ -53,10 +53,26 @@ const postPromtReviews = async (req, res) => {
     }
 }
 
+const saveCopycount = async (req, res) => {
+    try {
+
+        const data = req.body;
+        const result = await copiesCollection.insertOne(data);
+        res.status(201).json({ success: true, message: "copy promt data stored" });
+    }
+
+    catch (error) {
+
+        console.error("Error in saving copy promt data");
+        res.status(500).json({ success: false, message: "copy promt data saving failed" });
+    }
+}
+
 
 module.exports = {
     getAllpromts,
     getSinglePromt,
     postAddPromt,
-    postPromtReviews
+    postPromtReviews,
+    saveCopycount
 }

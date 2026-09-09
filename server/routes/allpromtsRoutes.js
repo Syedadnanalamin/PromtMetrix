@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getAllpromts, getSinglePromt, postAddPromt, postPromtReviews } = require('../controllers/allPromtsController');
+const { getAllpromts, getSinglePromt, postAddPromt, postPromtReviews, saveCopycount } = require('../controllers/allPromtsController');
 
 // gettin all promts
 router.get("/", getAllpromts);
@@ -15,6 +15,7 @@ router.post("/add-prompt", postAddPromt);
 // adding review to the promt
 
 router.post("/review", postPromtReviews);
+router.post("/copycount", saveCopycount)
 
 
 module.exports = router;
