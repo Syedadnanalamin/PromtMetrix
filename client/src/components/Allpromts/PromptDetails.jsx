@@ -105,8 +105,6 @@ export default function PromptDetails({ details, session: serverSession, promtid
 
 
     const result = await saveCopycount(data);
-    console.log(result);
-    console.log("object ", data);
 
   };
 

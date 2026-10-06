@@ -4,17 +4,23 @@ const { allPromtsCollection, savedpromts, reviewsCollection, copiesCollection } 
 const getUserDashboardAnalytics = async (req, res) => {
     const userId = req.params.id;
 
+    if (!userId || userId === "undefined") {
+        return res.status(200).json({ success: true, data: { myPromts: 0, savedPromts: 0, reviewsGiven: 0, totalCopiesPromts: 0 } });
+    }
+
     const [myPromts, savedPromts, reviewsGiven, totalCopiesPromts] = await Promise.all([
-        allPromtsCollection.countDocuments({ userId }),
+        allPromtsCollection.countDocuments({
+            $or: [
+                { "creator.userId": userId },
+                { userId }
+            ]
+        }),
         savedpromts.countDocuments({ userId }),
         reviewsCollection.countDocuments({ userId }),
         copiesCollection.countDocuments({ userId }),
-
     ]);
 
     res.status(200).json({ success: true, data: { myPromts, savedPromts, reviewsGiven, totalCopiesPromts } });
-
-
 }
 
 

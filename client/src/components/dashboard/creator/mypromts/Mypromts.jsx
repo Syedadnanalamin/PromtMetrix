@@ -26,12 +26,12 @@ import {
   X,
 } from "lucide-react";
 
-export default function CreatorMyPromts({ session }) {
+export default function CreatorMyPromts({ session, data = [] }) {
   const user = session?.user;
   const creatorName = user?.name || "Creator";
 
-  // Creator prompt inventory
-  const [prompts, setPrompts] = useState([
+  // Creator prompt inventory initialized from live data
+  const [prompts, setPrompts] = useState(Array.isArray(data) && data.length > 0 ? data : [
     {
       id: "cp-1",
       title: "SaaS Cold Email Engine (3-Step B2B Personalization)",
@@ -94,6 +94,12 @@ export default function CreatorMyPromts({ session }) {
     },
   ]);
 
+  React.useEffect(() => {
+    if (Array.isArray(data) && data.length > 0) {
+      setPrompts(data);
+    }
+  }, [data]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [toolFilter, setToolFilter] = useState("all");
@@ -102,22 +108,22 @@ export default function CreatorMyPromts({ session }) {
   // Filter calculations
   const filteredPrompts = prompts.filter((p) => {
     const matchesSearch =
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase());
+      (p.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.category || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
       statusFilter === "all" ||
-      (statusFilter === "premium" ? p.visibility === "Private" : p.status === statusFilter);
-    const matchesTool = toolFilter === "all" || p.aiTool.toLowerCase().includes(toolFilter.toLowerCase());
+      (statusFilter === "premium" ? p.visibility === "Private" : (p.status || "pending") === statusFilter);
+    const matchesTool = toolFilter === "all" || (p.aiTool || "").toLowerCase().includes(toolFilter.toLowerCase());
 
     return matchesSearch && matchesStatus && matchesTool;
   });
 
   const handleDelete = (id) => {
-    setPrompts((prev) => prev.filter((p) => p.id !== id));
+    setPrompts((prev) => prev.filter((p) => (p._id || p.id) !== id));
     setDeleteConfirmId(null);
   };
 
-  const totalCopies = prompts.reduce((acc, curr) => acc + (curr.copies || 0), 0);
+  const totalCopies = prompts.reduce((acc, curr) => acc + (curr.copyCount ?? curr.copies ?? 0), 0);
   const totalBookmarks = prompts.reduce((acc, curr) => acc + (curr.bookmarks || 0), 0);
 
   return (
@@ -265,129 +271,133 @@ export default function CreatorMyPromts({ session }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
-                {filteredPrompts.map((prompt) => (
-                  <tr key={prompt.id} className="hover:bg-muted/30 transition-colors">
-                    {/* Title + Thumbnail */}
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={prompt.thumbnail}
-                          alt={prompt.title}
-                          className="h-10 w-10 rounded-lg object-cover border border-border/60 shrink-0"
-                        />
-                        <div className="max-w-[200px]">
-                          <p className="font-bold text-foreground truncate">{prompt.title}</p>
+                {filteredPrompts.map((prompt) => {
+                  const pId = prompt._id || prompt.id;
+                  const copiesCount = prompt.copyCount ?? prompt.copies ?? 0;
+                  return (
+                    <tr key={pId} className="hover:bg-muted/30 transition-colors">
+                      {/* Title + Thumbnail */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={prompt.thumbnail || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80"}
+                            alt={prompt.title}
+                            className="h-10 w-10 rounded-lg object-cover border border-border/60 shrink-0"
+                          />
+                          <div className="max-w-[200px]">
+                            <p className="font-bold text-foreground truncate">{prompt.title}</p>
+                            <span className="text-[10px] text-muted-foreground">
+                              Added {prompt.createdAt}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Category & AI Tool */}
+                      <td className="py-4 px-4 space-y-0.5">
+                        <p className="font-medium text-foreground">{prompt.category}</p>
+                        <p className="text-[11px] text-primary font-semibold">{prompt.aiTool}</p>
+                      </td>
+
+                      {/* Visibility Badge */}
+                      <td className="py-4 px-4">
+                        {prompt.visibility === "Private" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            <Lock className="h-3 w-3" /> Premium Private
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-muted text-muted-foreground border border-border">
+                            <Globe className="h-3 w-3" /> Public Free
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Performance: Copies & Bookmarks */}
+                      <td className="py-4 px-4 space-y-1">
+                        <div className="flex items-center gap-1 font-bold text-foreground">
+                          <Copy className="h-3 w-3 text-primary" />
+                          <span>{copiesCount} copies</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Bookmark className="h-2.5 w-2.5 text-amber-400" />
+                          <span>{prompt.bookmarks || 0} saves</span>
+                        </div>
+                      </td>
+
+                      {/* Rating */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-1 font-bold text-amber-400">
+                          <Star className="h-3.5 w-3.5 fill-amber-400" />
+                          <span>{prompt.rating || 5}</span>
                           <span className="text-[10px] text-muted-foreground">
-                            Added {prompt.createdAt}
+                            ({prompt.reviewsCount || 0})
                           </span>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Category & AI Tool */}
-                    <td className="py-4 px-4 space-y-0.5">
-                      <p className="font-medium text-foreground">{prompt.category}</p>
-                      <p className="text-[11px] text-primary font-semibold">{prompt.aiTool}</p>
-                    </td>
+                      {/* Moderation Status */}
+                      <td className="py-4 px-4">
+                        {prompt.status === "approved" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <CheckCircle2 className="h-3 w-3" /> Live
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            <Clock className="h-3 w-3" /> In Review
+                          </span>
+                        )}
+                      </td>
 
-                    {/* Visibility Badge */}
-                    <td className="py-4 px-4">
-                      {prompt.visibility === "Private" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                          <Lock className="h-3 w-3" /> Premium Private
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-muted text-muted-foreground border border-border">
-                          <Globe className="h-3 w-3" /> Public Free
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Performance: Copies & Bookmarks */}
-                    <td className="py-4 px-4 space-y-1">
-                      <div className="flex items-center gap-1 font-bold text-foreground">
-                        <Copy className="h-3 w-3 text-primary" />
-                        <span>{prompt.copies} copies</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                        <Bookmark className="h-2.5 w-2.5 text-amber-400" />
-                        <span>{prompt.bookmarks} saves</span>
-                      </div>
-                    </td>
-
-                    {/* Rating */}
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-1 font-bold text-amber-400">
-                        <Star className="h-3.5 w-3.5 fill-amber-400" />
-                        <span>{prompt.rating}</span>
-                        <span className="text-[10px] text-muted-foreground">
-                          ({prompt.reviewsCount})
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Moderation Status */}
-                    <td className="py-4 px-4">
-                      {prompt.status === "approved" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                          <CheckCircle2 className="h-3 w-3" /> Live
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                          <Clock className="h-3 w-3" /> In Review
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-4 px-4 text-right">
-                      {deleteConfirmId === prompt.id ? (
-                        <div className="inline-flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(prompt.id)}
-                            className="px-2 py-1 rounded-md bg-destructive text-destructive-foreground text-[10px] font-bold"
-                          >
-                            Delete
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteConfirmId(null)}
-                            className="p-1 rounded-md border border-border hover:bg-muted text-muted-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1">
-                          <Link
-                            href={`/allpromts/${prompt.id}`}
-                            className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                            title="View Public Page"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => alert(`Edit prompt: ${prompt.title}`)}
-                            className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
-                            title="Edit Prompt Template"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteConfirmId(prompt.id)}
-                            className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
-                            title="Delete Template"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      {/* Actions */}
+                      <td className="py-4 px-4 text-right">
+                        {deleteConfirmId === pId ? (
+                          <div className="inline-flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(pId)}
+                              className="px-2 py-1 rounded-md bg-destructive text-destructive-foreground text-[10px] font-bold"
+                            >
+                              Delete
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="p-1 rounded-md border border-border hover:bg-muted text-muted-foreground"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1">
+                            <Link
+                              href={`/allpromts/${pId}`}
+                              className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                              title="View Public Page"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => alert(`Edit prompt: ${prompt.title}`)}
+                              className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                              title="Edit Prompt Template"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirmId(pId)}
+                              className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
+                              title="Delete Template"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

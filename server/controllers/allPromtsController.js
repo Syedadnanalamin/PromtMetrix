@@ -6,13 +6,36 @@ const getAllpromts = async (req, res) => {
     try {
 
         const allPromts = await allPromtsCollection.find({}).toArray();
+        console.log(allPromts);
         res.status(200).json(allPromts);
     } catch (error) {
         console.error("Error getting prompts:", error);
         res.status(500).json({ message: "Failed to fetch prompts", error: error.message });
+
     }
 
 
+}
+
+const getPromtbyuser = async (req, res) => {
+    try {
+        const userid = req.params.id;
+        if (!userid || userid === "undefined") {
+            return res.status(200).json([]);
+        }
+
+        const userpromts = await allPromtsCollection.find({
+            $or: [
+                { "creator.userId": userid },
+                { userId: userid }
+            ]
+        }).toArray();
+
+        res.status(200).json(userpromts);
+    } catch (error) {
+        console.error("Error getting user prompts:", error);
+        res.status(500).json({ message: "Failed to fetch user prompts", error: error.message });
+    }
 }
 
 
@@ -68,11 +91,27 @@ const saveCopycount = async (req, res) => {
     }
 }
 
+const deleteSinglePromt = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const result = await allPromtsCollection.deleteOne({ _id: new ObjectId(id) });
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, message: "Prompt not found" });
+        }
+        res.status(200).json({ success: true, message: "Prompt deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting prompt:", error);
+        res.status(500).json({ success: false, message: "Failed to delete prompt", error: error.message });
+    }
+}
+
 
 module.exports = {
     getAllpromts,
     getSinglePromt,
     postAddPromt,
     postPromtReviews,
-    saveCopycount
+    saveCopycount,
+    getPromtbyuser,
+    deleteSinglePromt
 }
