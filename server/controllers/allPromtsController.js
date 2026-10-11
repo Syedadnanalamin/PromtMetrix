@@ -208,6 +208,20 @@ const deleteSinglePromt = async (req, res) => {
     }
 }
 
+const updatePromptStatus = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { status } = req.body;
+        const result = await allPromtsCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status } }
+        );
+        res.status(200).json({ success: true, message: `Prompt status updated to ${status}` });
+    } catch (error) {
+        console.error("Error updating prompt status:", error);
+        res.status(500).json({ success: false, message: "Failed to update prompt status", error: error.message });
+    }
+}
 
 module.exports = {
     getAllpromts,
@@ -219,5 +233,6 @@ module.exports = {
     deleteSinglePromt,
     getReviewsByUser,
     updateReview,
-    deleteReview
+    deleteReview,
+    updatePromptStatus
 }

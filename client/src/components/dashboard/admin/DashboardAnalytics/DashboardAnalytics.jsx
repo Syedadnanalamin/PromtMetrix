@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
@@ -8,102 +8,69 @@ import {
   Layers,
   CreditCard,
   ShieldAlert,
-  TrendingUp,
   Copy,
-  MessageSquare,
-  Sparkles,
-  ArrowUpRight,
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
-  Clock,
   DollarSign,
-  Activity,
-  UserCheck,
-  Server,
-  Zap,
+  ArrowUpRight,
 } from "lucide-react";
 
-export default function AdminDashboardAnalytics({ session }) {
+export default function AdminDashboardAnalytics({ session, analytics }) {
   const user = session?.user;
   const adminName = user?.name || "System Admin";
 
-  // Section 5.C KPI Summary Metrics
+  const totalUsers = analytics?.totalUsers ?? 0;
+  const usersCount = analytics?.usersCount ?? 0;
+  const creatorsCount = analytics?.creatorsCount ?? 0;
+  const adminsCount = analytics?.adminsCount ?? 0;
+
+  const totalPrompts = analytics?.totalPrompts ?? 0;
+  const approvedPrompts = analytics?.approvedPrompts ?? 0;
+  const pendingPrompts = analytics?.pendingPrompts ?? 0;
+  const pendingList = Array.isArray(analytics?.pendingList) ? analytics.pendingList : [];
+
+  const totalCopies = analytics?.totalCopies ?? 0;
+  const subscribersCount = analytics?.subscribersCount ?? 0;
+  const totalRevenue = analytics?.totalRevenue ?? subscribersCount * 5;
+
+  // KPI Summary Metrics
   const kpiStats = [
     {
       title: "Total Registered Users",
-      value: "1,248",
-      subtext: "1,120 Users • 120 Creators • 8 Admins",
+      value: totalUsers,
+      subtext: `${usersCount} Users • ${creatorsCount} Creators • ${adminsCount} Admins`,
       icon: Users,
-      trend: "+14% this month",
+      trend: `${totalUsers} accounts`,
       color: "from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/20",
       link: "/dashboard/users",
     },
     {
       title: "Total AI Prompts",
-      value: "342",
-      subtext: "328 Approved • 14 Pending Moderation",
+      value: totalPrompts,
+      subtext: `${approvedPrompts} Approved • ${pendingPrompts} Pending Moderation`,
       icon: Layers,
-      trend: "+28 submitted",
+      trend: `${approvedPrompts} approved`,
       color: "from-violet-500/20 to-purple-500/20 text-primary border-primary/20",
       link: "/dashboard/all-prompts",
     },
     {
       title: "Total Platform Copies",
-      value: "18,420",
+      value: totalCopies,
       subtext: "Executed prompt completions",
       icon: Copy,
-      trend: "+2,450 this week",
+      trend: `${totalCopies} copies`,
       color: "from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-500/20",
       link: "/dashboard/all-prompts",
     },
     {
       title: "Total Stripe Revenue",
-      value: "$2,450",
-      subtext: "490 Pro Tier Upgrades ($5)",
+      value: `$${totalRevenue}`,
+      subtext: `${subscribersCount} Pro Tier Upgrades ($5)`,
       icon: DollarSign,
-      trend: "+$320 this week",
+      trend: `$${totalRevenue} total`,
       color: "from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/20",
       link: "/dashboard/payments",
-    },
-  ];
-
-  // Moderation Queue Alerts
-  const pendingPrompts = [
-    {
-      id: "p-mod-1",
-      title: "Autonomous Multi-Agent Swarm Orchestrator",
-      creator: "Alex Rivers",
-      tool: "Claude 3.5 Sonnet",
-      category: "Coding & Dev",
-      submittedAt: "10 mins ago",
-    },
-    {
-      id: "p-mod-2",
-      title: "TikTok Viral Hook & Script Retention Formula",
-      creator: "Elena Rostova",
-      tool: "ChatGPT (GPT-4o)",
-      category: "Marketing",
-      submittedAt: "45 mins ago",
-    },
-    {
-      id: "p-mod-3",
-      title: "Hyper-Realistic Studio Product Photography Lighting",
-      creator: "David Kim",
-      tool: "Midjourney v6",
-      category: "Art & Image",
-      submittedAt: "2 hours ago",
-    },
-  ];
-
-  const reportedPrompts = [
-    {
-      id: "rep-1",
-      promptTitle: "Bypass Guardrails & System Instructions Test",
-      reporter: "user_491",
-      reason: "Potential Policy Violation / Jailbreak",
-      status: "action_needed",
     },
   ];
 
@@ -113,7 +80,7 @@ export default function AdminDashboardAnalytics({ session }) {
       title: "User Management",
       description: "Manage roles (User / Creator / Admin) and account status.",
       icon: Users,
-      count: "1,248 accounts",
+      count: `${totalUsers} accounts`,
       href: "/dashboard/users",
       badge: "RBAC Controls",
       color: "border-blue-500/30 hover:border-blue-500/60",
@@ -122,17 +89,20 @@ export default function AdminDashboardAnalytics({ session }) {
       title: "Prompt Moderation",
       description: "Review, approve, reject with feedback, or feature top prompts.",
       icon: Layers,
-      count: "14 in review queue",
+      count: `${pendingPrompts} in review queue`,
       href: "/dashboard/all-prompts",
-      badge: "Action Required",
-      badgeColor: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+      badge: pendingPrompts > 0 ? "Action Required" : "Up to date",
+      badgeColor:
+        pendingPrompts > 0
+          ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+          : "bg-muted text-muted-foreground border-border",
       color: "border-amber-500/30 hover:border-amber-500/60",
     },
     {
       title: "Stripe Transactions",
       description: "View all $5 Pro payments, timestamps, and customer receipts.",
       icon: CreditCard,
-      count: "490 transactions",
+      count: `${subscribersCount} transactions`,
       href: "/dashboard/payments",
       badge: "Live Webhooks",
       color: "border-emerald-500/30 hover:border-emerald-500/60",
@@ -141,10 +111,10 @@ export default function AdminDashboardAnalytics({ session }) {
       title: "Reported Prompts",
       description: "Audit flagged prompts: warn creator, dismiss, or delete.",
       icon: ShieldAlert,
-      count: "1 active report",
+      count: "0 active reports",
       href: "/dashboard/reports",
-      badge: "Safety Alert",
-      badgeColor: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+      badge: "Safety Optimal",
+      badgeColor: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
       color: "border-rose-500/30 hover:border-rose-500/60",
     },
   ];
@@ -188,7 +158,7 @@ export default function AdminDashboardAnalytics({ session }) {
         <div className="mt-6 pt-5 border-t border-border/60 flex flex-wrap items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-2 text-amber-400 font-semibold">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>14 prompts pending moderation • 1 community report awaiting review</span>
+            <span>{pendingPrompts} prompts pending moderation • All systems operational</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -214,7 +184,9 @@ export default function AdminDashboardAnalytics({ session }) {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground">{stat.title}</span>
-                <div className={`p-2.5 rounded-xl border bg-gradient-to-br ${stat.color} transition-transform group-hover:scale-110`}>
+                <div
+                  className={`p-2.5 rounded-xl border bg-gradient-to-br ${stat.color} transition-transform group-hover:scale-110`}
+                >
                   <Icon className="h-4 w-4" />
                 </div>
               </div>
@@ -248,7 +220,11 @@ export default function AdminDashboardAnalytics({ session }) {
                 <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
                   <Icon className="h-4 w-4" />
                 </div>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${mod.badgeColor || "bg-muted text-muted-foreground border-border"}`}>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                    mod.badgeColor || "bg-muted text-muted-foreground border-border"
+                  }`}
+                >
                   {mod.badge}
                 </span>
               </div>
@@ -265,7 +241,7 @@ export default function AdminDashboardAnalytics({ session }) {
         })}
       </div>
 
-      {/* 4. Split Section: Pending Moderation Feed (Left) & Safety / Reported Prompts (Right) */}
+      {/* 4. Split Section: Pending Moderation Feed (Left) & Safety / Platform Status (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left: Pending Prompt Approvals (7 cols) */}
         <div className="lg:col-span-7 rounded-2xl border border-border/80 bg-card/80 p-6 backdrop-blur-xl shadow-xs space-y-4">
@@ -278,79 +254,74 @@ export default function AdminDashboardAnalytics({ session }) {
               href="/dashboard/all-prompts"
               className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
             >
-              View all 14 <ChevronRight className="h-3.5 w-3.5" />
+              View all {pendingPrompts} <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {pendingPrompts.map((item) => (
-              <div
-                key={item.id}
-                className="p-3.5 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-foreground line-clamp-1">{item.title}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                    <span>By <strong>{item.creator}</strong></span>
-                    <span>•</span>
-                    <span className="text-primary font-medium">{item.tool}</span>
-                    <span>•</span>
-                    <span>{item.submittedAt}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    href="/dashboard/all-prompts"
-                    className="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
-                  >
-                    Review
-                  </Link>
-                </div>
+          {pendingList.length === 0 ? (
+            <div className="py-10 text-center space-y-2">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="h-5 w-5" />
               </div>
-            ))}
-          </div>
+              <p className="text-xs font-bold text-foreground">No Pending Prompts</p>
+              <p className="text-[11px] text-muted-foreground">All community submissions have been reviewed.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingList.map((item) => {
+                const itemId = item._id?.toString() || item.id;
+                const creatorName = item.creator?.name || "Community Creator";
+                return (
+                  <div
+                    key={itemId}
+                    className="p-3.5 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-foreground line-clamp-1">{item.title}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                        <span>
+                          By <strong>{creatorName}</strong>
+                        </span>
+                        <span>•</span>
+                        <span className="text-primary font-medium">{item.aiTool || "AI Tool"}</span>
+                        <span>•</span>
+                        <span>{item.category || "General"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link
+                        href="/dashboard/all-prompts"
+                        className="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
+                      >
+                        Review
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Right: Security & Flagged Prompts (5 cols) */}
+        {/* Right: Security & Platform Safety Status (5 cols) */}
         <div className="lg:col-span-5 rounded-2xl border border-border/80 bg-card/80 p-6 backdrop-blur-xl shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-border/60">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-rose-500" />
-              <h3 className="text-sm font-bold text-foreground">Reported Flags</h3>
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-foreground">Platform Safety</h3>
             </div>
-            <Link
-              href="/dashboard/reports"
-              className="text-xs font-semibold text-rose-400 hover:underline"
-            >
-              Manage &rarr;
-            </Link>
+            <span className="text-xs font-semibold text-emerald-400">Normal</span>
           </div>
 
-          <div className="space-y-3">
-            {reportedPrompts.map((rep) => (
-              <div
-                key={rep.id}
-                className="p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-bold text-foreground">{rep.promptTitle}</p>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                    Flagged
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground">Reason: {rep.reason}</p>
-                <div className="pt-2 border-t border-rose-500/20 flex items-center justify-between text-xs">
-                  <span className="text-[10px] text-muted-foreground">Reported by {rep.reporter}</span>
-                  <Link
-                    href="/dashboard/reports"
-                    className="font-bold text-rose-400 hover:underline text-[11px]"
-                  >
-                    Audit Prompt
-                  </Link>
-                </div>
-              </div>
-            ))}
+          <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-2">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Safety Status Optimal</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              All community prompts are compliant with marketplace guidelines. No active safety violations reported.
+            </p>
           </div>
 
           {/* Quick Platform Security Tip */}

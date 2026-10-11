@@ -10,7 +10,8 @@ const {
     deleteSinglePromt,
     getReviewsByUser,
     updateReview,
-    deleteReview
+    deleteReview,
+    updatePromptStatus
 } = require('../controllers/allPromtsController');
 
 // gettin all promts
@@ -23,6 +24,9 @@ router.get("/byuser/:id", getPromtbyuser);
 router.get("/reviews/byuser/:id", getReviewsByUser);
 router.put("/reviews/:id", updateReview);
 router.delete("/reviews/:id", deleteReview);
+
+// update prompt status (approve / reject)
+router.put("/:id/status", updatePromptStatus);
 
 // getting individual promts info
 router.get("/:id", getSinglePromt);

@@ -4,6 +4,7 @@ import UserDashboardAnalytics from '@/components/dashboard/user/DashboardAnalyti
 import CreatorDashboardAnalytics from '@/components/dashboard/creator/DashboardAnalytics/DashboardAnalytics';
 import AdminDashboardAnalytics from '@/components/dashboard/admin/DashboardAnalytics/DashboardAnalytics';
 import { getUserDashboardAnalytics } from '@/lib/actions/dashboard/userDashboardAnalytics';
+import { getAdminDashboardAnalytics } from '@/lib/actions/dashboard/adminDashboardAnalytics';
 import getPromtbyuser from '@/lib/actions/promts/getpromtsbyuser';
 
 export const metadata = {
@@ -21,7 +22,8 @@ const DashboardHomePage = async () => {
 
   // Render role-specific analytical reports based on session userType
   if (userType === 'admin') {
-    return <AdminDashboardAnalytics session={session} />;
+    const adminAnalytics = await getAdminDashboardAnalytics();
+    return <AdminDashboardAnalytics session={session} analytics={adminAnalytics?.data} />;
   }
 
   if (userType === 'creator') {
