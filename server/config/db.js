@@ -26,19 +26,17 @@ const allPromtsCollection = db.collection("allPromts");
 const savedpromts = db.collection("savedPromts");
 const reviewsCollection = db.collection("reviews");
 const copiesCollection = db.collection("promptCopies");
-
-
-
-
-
-
-
+const subscriberCollection = db.collection("subscribers");
+const userCollection = db.collection("user");
 
 module.exports = {
   connectDB,
   client,
+  db,
   allPromtsCollection,
   savedpromts,
   reviewsCollection,
-  copiesCollection
+  copiesCollection,
+  subscriberCollection,
+  userCollection
 };

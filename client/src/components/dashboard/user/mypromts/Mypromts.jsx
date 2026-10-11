@@ -75,17 +75,15 @@ const formatDate = (dateString) => {
 
 export default function UserMyPromts({ session, data = [] }) {
   const user = session?.user;
-  const isPremium = user?.isPremium || false;
+  const isPro = user?.plan === "pro" || user?.isPremium || user?.userType === "creator" || user?.userType === "admin";
+  const isPremium = isPro;
 
-  // Prompts state initialized from API data prop
-  const [promptsList, setPromptsList] = useState(Array.isArray(data) ? data : []);
-
-  // Synchronize when data prop updates
-  useEffect(() => {
-    if (Array.isArray(data)) {
-      setPromptsList(data);
-    }
-  }, [data]);
+  // Prompts derived from data prop with deleted IDs filtered
+  const [deletedIds, setDeletedIds] = useState([]);
+  const promptsList = useMemo(
+    () => (Array.isArray(data) ? data.filter((p) => !deletedIds.includes(p._id || p.id)) : []),
+    [data, deletedIds]
+  );
 
   // UI state
   const [viewMode, setViewMode] = useState("table"); // "table" | "grid"
@@ -110,6 +108,7 @@ export default function UserMyPromts({ session, data = [] }) {
   // Quota calculation (Free tier max 3 prompts)
   const maxFreePrompts = 3;
   const usedPrompts = promptsList.length;
+  const isLimitReached = !isPro && usedPrompts >= maxFreePrompts;
   const remainingQuota = isPremium ? "Unlimited" : Math.max(0, maxFreePrompts - usedPrompts);
   const quotaPercent = isPremium ? 100 : Math.min(100, Math.round((usedPrompts / maxFreePrompts) * 100));
 
@@ -200,7 +199,7 @@ export default function UserMyPromts({ session, data = [] }) {
     try {
       const res = await deletePromt(id);
       if (res?.success !== false) {
-        setPromptsList((prev) => prev.filter((p) => (p._id || p.id) !== id));
+        setDeletedIds((prev) => [...prev, id]);
         if (previewPrompt && (previewPrompt._id || previewPrompt.id) === id) {
           setPreviewPrompt(null);
         }
@@ -259,13 +258,25 @@ export default function UserMyPromts({ session, data = [] }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/dashboard/add-prompt"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/35 transition-all active:scale-98"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>Submit New Prompt</span>
-            </Link>
+            {isLimitReached ? (
+              <form action="/api/checkout_sessions" method="POST">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-amber-500/25 hover:bg-amber-600 transition-all cursor-pointer"
+                >
+                  <Crown className="h-4 w-4" />
+                  <span>Limit Reached (Upgrade to Pro)</span>
+                </button>
+              </form>
+            ) : (
+              <Link
+                href="/dashboard/add-prompt"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/35 transition-all active:scale-98"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>Submit New Prompt</span>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -473,7 +484,7 @@ export default function UserMyPromts({ session, data = [] }) {
           <span className="text-muted-foreground font-medium">Active filters:</span>
           {searchQuery && (
             <span className="inline-flex items-center gap-1 rounded-lg bg-primary/10 border border-primary/25 px-2.5 py-1 text-primary font-semibold">
-              Search: "{searchQuery}"
+              Search: &quot;{searchQuery}&quot;
               <button onClick={() => setSearchQuery("")} className="hover:opacity-80">
                 <X className="h-3 w-3" />
               </button>

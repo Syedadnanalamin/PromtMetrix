@@ -29,7 +29,7 @@ import {
 
 export default function Profile({ session }) {
   const user = session?.user;
-  const isPremiumUser = user?.isPremium || false;
+  const isPremiumUser = user?.plan === "pro" || user?.isPremium || user?.userType === "creator" || user?.userType === "admin";
 
   // Profile editable state
   const [name, setName] = useState(user?.name || "Prompt Explorer");

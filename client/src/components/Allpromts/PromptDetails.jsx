@@ -79,7 +79,7 @@ export default function PromptDetails({ details, session: serverSession, promtid
   const [reportSubmitted, setReportSubmitted] = useState(false);
 
   const isPrivate = details?.visibility?.toLowerCase() === "private";
-  const isPremiumUser = user?.subscription === "premium" || user?.role === "admin";
+  const isPremiumUser = user?.subscription === "premium" || user?.plan === "pro" || user?.isPremium || user?.role === "admin" || user?.userType === "admin";
   const isLocked = isPrivate && !isPremiumUser;
   // Handle Copy Prompt
   const handleCopyPrompt = async () => {

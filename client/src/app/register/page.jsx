@@ -62,12 +62,15 @@ export default function RegisterPage() {
     console.log("this is the data console", data);
 
     try {
+      const isRegularUser = (data.userType || "user") === "user";
+
       const res = await authClient.signUp.email({
         name: data.name,
         email: data.email,
         password: data.password,
         image: data.photoURL || undefined,
         userType: data.userType || "user",
+        plan: isRegularUser ? "free" : undefined,
         callbackURL: "/login",
       });
 

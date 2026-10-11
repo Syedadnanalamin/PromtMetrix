@@ -1,4 +1,4 @@
-const { allPromtsCollection, savedpromts, reviewsCollection, copiesCollection } = require("../config/db");
+const { allPromtsCollection, savedpromts, reviewsCollection, copiesCollection, subscriberCollection, userCollection } = require("../config/db");
 
 
 const getUserDashboardAnalytics = async (req, res) => {
@@ -38,15 +38,29 @@ const postSavedPromts = async (req, res) => {
         console.error(error);
         res.status(500).json({ success: false, message: "There is a problem saving the promts", error: error.message });
     }
+}
 
+const postSubscriber = async (req, res) => {
+    const data = req.body;
+    try {
+        const result = await subscriberCollection.insertOne(data);
 
+        // update user plan to pro
+        await userCollection.updateOne(
+            { email: data.email },
+            { $set: { plan: "pro", isPremium: true } }
+        );
 
-
-
+        res.status(201).json({ success: true, message: "subscriber added successfully", insertedId: result.insertedId });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "There is a problem saving the subscriber", error: error.message });
+    }
 }
 
 module.exports = {
-
     postSavedPromts,
-    getUserDashboardAnalytics
+    getUserDashboardAnalytics,
+    postSubscriber
 }

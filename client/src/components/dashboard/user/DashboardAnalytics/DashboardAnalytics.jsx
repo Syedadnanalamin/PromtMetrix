@@ -26,7 +26,7 @@ export default function UserDashboardAnalytics({ session, analytics }) {
   const user = session?.user;
   const userName = user?.name || "Prompt Explorer";
   const userEmail = user?.email || "";
-  const isPremium = user?.isPremium || false;
+  const isPremium = user?.plan === "pro" || user?.isPremium || user?.userType === "creator" || user?.userType === "admin";
 
   const myPromptsCount = analytics?.myPromts ?? 0;
   const savedPromptsCount = analytics?.savedPromts ?? 0;
