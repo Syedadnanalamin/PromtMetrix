@@ -1,12 +1,28 @@
 const express = require("express");
 const router = express.Router();
-const { getAllpromts, getSinglePromt, postAddPromt, postPromtReviews, saveCopycount, getPromtbyuser, deleteSinglePromt } = require('../controllers/allPromtsController');
+const {
+    getAllpromts,
+    getSinglePromt,
+    postAddPromt,
+    postPromtReviews,
+    saveCopycount,
+    getPromtbyuser,
+    deleteSinglePromt,
+    getReviewsByUser,
+    updateReview,
+    deleteReview
+} = require('../controllers/allPromtsController');
 
 // gettin all promts
 router.get("/", getAllpromts);
 
 // getting prompts by user (must be before /:id)
 router.get("/byuser/:id", getPromtbyuser);
+
+// user reviews routes (must be before /:id)
+router.get("/reviews/byuser/:id", getReviewsByUser);
+router.put("/reviews/:id", updateReview);
+router.delete("/reviews/:id", deleteReview);
 
 // getting individual promts info
 router.get("/:id", getSinglePromt);

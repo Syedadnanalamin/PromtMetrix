@@ -35,3 +35,17 @@ export const serverDelete = async (url) => {
 
     return res.json();
 }
+
+export const serverPut = async (url, data) => {
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api${url}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    });
+
+    return res.json();
+}
+

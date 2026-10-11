@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   MessageSquare,
@@ -14,145 +14,88 @@ import {
   Grid3X3,
   List,
   X,
-  Layers,
   ThumbsUp,
   Clock,
   ArrowUpDown,
   ExternalLink,
-  PlusCircle,
-  Check,
+  RefreshCw,
   AlertCircle,
+  Check,
+  Loader2,
+  Layers,
+  ArrowUpRight,
 } from "lucide-react";
+import { getClientSession } from "@/lib/authentication/client-session";
+import {
+  getUserReviews,
+  updateUserReview,
+  deleteUserReview,
+} from "@/lib/actions/promts/userReviews";
 
-// Mock user reviews dataset
-const INITIAL_REVIEWS = [
-  {
-    id: "rev-1",
-    promptId: "p-101",
-    promptTitle: "SaaS Cold Email Sequence (5-Step High Conversion)",
-    promptThumbnail:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80",
-    category: "Marketing & Copywriting",
-    aiTool: "ChatGPT",
-    aiModel: "GPT-4o",
-    rating: 5,
-    title: "Game changer for our outbound pipeline!",
-    comment:
-      "This 5-touch cadence delivered an immediate pattern interrupt for our B2B sales team. We booked 4 qualified demos in the first week of testing. The soft CTA approach is vastly superior to pushy sales pitches.",
-    createdAt: "2025-02-21",
-    helpfulCount: 18,
-  },
-  {
-    id: "rev-2",
-    promptId: "p-102",
-    promptTitle: "Full-Stack Next.js 16 Clean Architecture Boilerplate",
-    promptThumbnail:
-      "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&q=80",
-    category: "Coding & Development",
-    aiTool: "Claude",
-    aiModel: "Claude 3.5 Sonnet",
-    rating: 5,
-    title: "Production-ready structure with Zero Fluff",
-    comment:
-      "Extremely clean folder hierarchy and well-typed Server Action boilerplates. Claude scaffolded the Zod validation and Better Auth middleware seamlessly without hallucinations. Saved us easily 20+ hours of setup time.",
-    createdAt: "2025-02-19",
-    helpfulCount: 24,
-  },
-  {
-    id: "rev-3",
-    promptId: "p-103",
-    promptTitle: "Cyberpunk Cinematic Portrait & Neon Volumetric Lighting",
-    promptThumbnail:
-      "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&q=80",
-    category: "Art & Image Generation",
-    aiTool: "Midjourney",
-    aiModel: "Midjourney v6",
-    rating: 4,
-    title: "Stunning volumetric lighting and colors",
-    comment:
-      "The octane render and anamorphic lens parameters produce incredible reflections in rain environments. Just had to tweak the stylized weight (--s 250) to get exact character likeness, but the prompt base is top tier.",
-    createdAt: "2025-02-15",
-    helpfulCount: 9,
-  },
-  {
-    id: "rev-4",
-    promptId: "p-106",
-    promptTitle: "High-Ticket B2B Sales Objection Handling Matrix",
-    promptThumbnail:
-      "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&q=80",
-    category: "Business & Sales",
-    aiTool: "ChatGPT",
-    aiModel: "GPT-4o",
-    rating: 5,
-    title: "The Empathy-Reflect framework won our negotiation",
-    comment:
-      "Used the exact scripts when handling a tight budget objection on an enterprise software deal. The buyer felt understood and agreed to a low-risk pilot instead of walking away. Highly recommended!",
-    createdAt: "2025-02-10",
-    helpfulCount: 14,
-  },
-];
+// Format date helper
+const formatDate = (dateInput) => {
+  if (!dateInput) return "Recently";
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return String(dateInput);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "Recently";
+  }
+};
 
-export default function MyReviews() {
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+// AI tool badge styling helper
+const getToolBadgeStyle = (tool = "") => {
+  const t = String(tool).toLowerCase();
+  if (t.includes("chatgpt") || t.includes("gpt")) {
+    return "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+  }
+  if (t.includes("claude")) {
+    return "bg-amber-500/10 text-amber-400 border-amber-500/30";
+  }
+  if (t.includes("midjourney")) {
+    return "bg-purple-500/10 text-purple-400 border-purple-500/30";
+  }
+  if (t.includes("gemini")) {
+    return "bg-sky-500/10 text-sky-400 border-sky-500/30";
+  }
+  return "bg-primary/10 text-primary border-primary/30";
+};
+
+export default function MyReviews({ session: propSession }) {
+  const clientSession = getClientSession();
+  const session = propSession || clientSession;
+  const user = session?.user;
+  const userId = user?.id || user?._id;
+
+  // Real-time state
+  const [reviews, setReviews] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Filters & sorting state
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [toolFilter, setToolFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState("grid");
 
-  // Interaction feedback states
+  // Interaction states
   const [editingReview, setEditingReview] = useState(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isDeletingId, setIsDeletingId] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
-  const [lastRemovedReview, setLastRemovedReview] = useState(null);
 
   // Edit form state
   const [editRating, setEditRating] = useState(5);
   const [editTitle, setEditTitle] = useState("");
   const [editComment, setEditComment] = useState("");
-
-  const availableTools = useMemo(() => {
-    const tools = new Set(reviews.map((r) => r.aiTool));
-    return ["all", ...Array.from(tools)];
-  }, [reviews]);
-
-  // Filtered & Sorted Reviews
-  const filteredReviews = useMemo(() => {
-    return reviews
-      .filter((rev) => {
-        const matchesSearch =
-          rev.promptTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          rev.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          rev.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          rev.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          rev.aiTool.toLowerCase().includes(searchQuery.toLowerCase());
-
-        const matchesRating =
-          ratingFilter === "all" || rev.rating === parseInt(ratingFilter, 10);
-
-        const matchesTool = toolFilter === "all" || rev.aiTool === toolFilter;
-
-        return matchesSearch && matchesRating && matchesTool;
-      })
-      .sort((a, b) => {
-        if (sortBy === "newest") {
-          return new Date(b.createdAt) - new Date(a.createdAt);
-        }
-        if (sortBy === "oldest") {
-          return new Date(a.createdAt) - new Date(b.createdAt);
-        }
-        if (sortBy === "highest") {
-          return b.rating - a.rating;
-        }
-        if (sortBy === "lowest") {
-          return a.rating - b.rating;
-        }
-        if (sortBy === "helpful") {
-          return b.helpfulCount - a.helpfulCount;
-        }
-        return 0;
-      });
-  }, [reviews, searchQuery, ratingFilter, toolFilter, sortBy]);
 
   const showToast = (message) => {
     setToastMessage(message);
@@ -161,68 +104,193 @@ export default function MyReviews() {
     }, 4000);
   };
 
+  // Fetch real-time data from MongoDB API
+  const loadUserReviews = useCallback(
+    async (isManualRefresh = false) => {
+      if (!userId) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (isManualRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      try {
+        const data = await getUserReviews(userId);
+        setReviews(Array.isArray(data) ? data : []);
+        if (isManualRefresh) {
+          showToast("Reviews synchronized with database!");
+        }
+      } catch (err) {
+        console.error("Failed to load user reviews:", err);
+        setError("Unable to load reviews. Please verify your connection.");
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [userId]
+  );
+
+  useEffect(() => {
+    loadUserReviews();
+  }, [loadUserReviews]);
+
+  // Extract unique AI Tools for filter dropdown
+  const availableTools = useMemo(() => {
+    const tools = new Set();
+    reviews.forEach((r) => {
+      const tool = r.prompt?.aiTool || r.prompt?.aiModel || r.aiTool;
+      if (tool) tools.add(tool);
+    });
+    return ["all", ...Array.from(tools)];
+  }, [reviews]);
+
+  // Filter & sort reviews
+  const filteredReviews = useMemo(() => {
+    return reviews
+      .filter((rev) => {
+        const promptTitle = rev.prompt?.title || rev.promptTitle || "";
+        const promptCategory = rev.prompt?.category || rev.category || "";
+        const promptTool =
+          rev.prompt?.aiTool || rev.prompt?.aiModel || rev.aiTool || "";
+        const title = rev.title || "";
+        const comment = rev.comment || rev.message || "";
+        const rating = Number(rev.rating) || 5;
+
+        const q = searchQuery.toLowerCase();
+        const matchesSearch =
+          !q ||
+          promptTitle.toLowerCase().includes(q) ||
+          title.toLowerCase().includes(q) ||
+          comment.toLowerCase().includes(q) ||
+          promptCategory.toLowerCase().includes(q) ||
+          promptTool.toLowerCase().includes(q);
+
+        const matchesRating =
+          ratingFilter === "all" || rating === parseInt(ratingFilter, 10);
+
+        const matchesTool =
+          toolFilter === "all" ||
+          promptTool.toLowerCase() === toolFilter.toLowerCase();
+
+        return matchesSearch && matchesRating && matchesTool;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.date || 0).getTime();
+        const dateB = new Date(b.createdAt || b.date || 0).getTime();
+        const ratingA = Number(a.rating) || 5;
+        const ratingB = Number(b.rating) || 5;
+
+        if (sortBy === "newest") return dateB - dateA;
+        if (sortBy === "oldest") return dateA - dateB;
+        if (sortBy === "highest") return ratingB - ratingA;
+        if (sortBy === "lowest") return ratingA - ratingB;
+        return 0;
+      });
+  }, [reviews, searchQuery, ratingFilter, toolFilter, sortBy]);
+
   // Open Edit Review Modal
   const handleOpenEdit = (review) => {
     setEditingReview(review);
-    setEditRating(review.rating);
-    setEditTitle(review.title);
-    setEditComment(review.comment);
+    setEditRating(Number(review.rating) || 5);
+    setEditTitle(
+      review.title ||
+        (review.message
+          ? review.message.slice(0, 45) + (review.message.length > 45 ? "..." : "")
+          : "")
+    );
+    setEditComment(review.comment || review.message || "");
   };
 
-  // Save Edit Review
-  const handleSaveEdit = (e) => {
+  // Save Edit Review to API
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!editingReview) return;
 
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === editingReview.id
-          ? {
-              ...r,
-              rating: editRating,
-              title: editTitle.trim(),
-              comment: editComment.trim(),
-            }
-          : r
-      )
-    );
+    const reviewId = editingReview._id || editingReview.id;
+    setIsSubmittingEdit(true);
 
-    setEditingReview(null);
-    showToast("Review updated successfully!");
-  };
+    const updatePayload = {
+      rating: editRating,
+      title: editTitle.trim(),
+      comment: editComment.trim(),
+      message: editComment.trim(),
+    };
 
-  // Delete Review
-  const handleDeleteReview = (id) => {
-    const target = reviews.find((r) => r.id === id);
-    if (target) {
-      setLastRemovedReview(target);
-      setReviews((prev) => prev.filter((r) => r.id !== id));
-      setDeleteConfirmId(null);
-      showToast("Review deleted.");
+    const res = await updateUserReview(reviewId, updatePayload);
+    setIsSubmittingEdit(false);
+
+    if (res?.success) {
+      setReviews((prev) =>
+        prev.map((r) =>
+          (r._id || r.id) === reviewId
+            ? {
+                ...r,
+                ...updatePayload,
+                updatedAt: new Date().toISOString(),
+              }
+            : r
+        )
+      );
+      setEditingReview(null);
+      showToast("Review updated successfully!");
+    } else {
+      showToast(res?.message || "Failed to update review.");
     }
   };
 
-  // Undo Delete
-  const handleUndoDelete = () => {
-    if (lastRemovedReview) {
-      setReviews((prev) => [lastRemovedReview, ...prev]);
-      setLastRemovedReview(null);
-      setToastMessage(null);
+  // Delete Review from API
+  const handleDeleteReview = async (id) => {
+    setIsDeletingId(id);
+    const target = reviews.find((r) => (r._id || r.id) === id);
+
+    // Optimistically update list
+    setReviews((prev) => prev.filter((r) => (r._id || r.id) !== id));
+    setDeleteConfirmId(null);
+
+    const res = await deleteUserReview(id);
+    setIsDeletingId(null);
+
+    if (res?.success) {
+      showToast("Review deleted successfully.");
+    } else {
+      // Revert if API failed
+      if (target) {
+        setReviews((prev) => [target, ...prev]);
+      }
+      showToast(res?.message || "Failed to delete review.");
     }
   };
 
-  // Aggregate stats
+  // Computed statistics
   const totalReviewsCount = reviews.length;
   const avgRating =
     totalReviewsCount > 0
-      ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / totalReviewsCount).toFixed(1)
-      : "0.0";
-  const fiveStarCount = reviews.filter((r) => r.rating === 5).length;
-  const totalHelpful = reviews.reduce((acc, curr) => acc + curr.helpfulCount, 0);
+      ? (
+          reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) /
+          totalReviewsCount
+        ).toFixed(1)
+      : "5.0";
+  const fiveStarCount = reviews.filter(
+    (r) => (Number(r.rating) || 5) === 5
+  ).length;
+
+  const distinctPromptsCount = useMemo(() => {
+    const set = new Set();
+    reviews.forEach((r) => {
+      if (r.promptId) set.add(r.promptId);
+    });
+    return set.size;
+  }, [reviews]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* 1. Header Banner & Stats Overview */}
+      {/* 1. Header Banner & Live Stats */}
       <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-linear-to-br from-card via-card/90 to-primary/10 p-6 sm:p-8 backdrop-blur-xl shadow-xs">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 h-48 w-48 rounded-full bg-primary/15 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-12 h-32 w-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
@@ -230,24 +298,41 @@ export default function MyReviews() {
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span>Community Feedback</span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Real-Time Reviews Data</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
               My <span className="ai-gradient-text">Reviews</span>
             </h1>
             <p className="text-sm text-muted-foreground max-w-xl">
-              Track and manage all community ratings, feedback, and helpful insights you've shared on AI prompt templates.
+              Track, update, and manage your genuine prompt reviews and feedback stored in MongoDB.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Real-time Refresh Button */}
+            <button
+              type="button"
+              onClick={() => loadUserReviews(true)}
+              disabled={isRefreshing || isLoading}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/80 px-3.5 py-2.5 text-xs font-semibold text-foreground hover:bg-accent hover:border-primary/40 transition-all active:scale-95 disabled:opacity-50"
+              title="Refresh live reviews"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-primary" : "text-muted-foreground"}`}
+              />
+              <span>{isRefreshing ? "Syncing..." : "Sync Data"}</span>
+            </button>
+
             <Link
               href="/allpromts"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 transition-all active:scale-98"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 transition-all active:scale-95"
             >
               <Search className="h-4 w-4" />
-              <span>Explore & Review Prompts</span>
+              <span>Explore Prompts</span>
             </Link>
           </div>
         </div>
@@ -259,8 +344,10 @@ export default function MyReviews() {
               <MessageSquare className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-muted-foreground font-medium">Reviews Submitted</p>
-              <p className="font-extrabold text-foreground text-sm">{totalReviewsCount} reviews</p>
+              <p className="text-muted-foreground font-medium">Reviews Stored</p>
+              <p className="font-extrabold text-foreground text-sm">
+                {isLoading ? "..." : `${totalReviewsCount} reviews`}
+              </p>
             </div>
           </div>
 
@@ -270,7 +357,9 @@ export default function MyReviews() {
             </div>
             <div>
               <p className="text-muted-foreground font-medium">Average Rating</p>
-              <p className="font-extrabold text-foreground text-sm">{avgRating} / 5.0</p>
+              <p className="font-extrabold text-foreground text-sm">
+                {isLoading ? "..." : `${avgRating} / 5.0`}
+              </p>
             </div>
           </div>
 
@@ -280,17 +369,21 @@ export default function MyReviews() {
             </div>
             <div>
               <p className="text-muted-foreground font-medium">5-Star Ratings</p>
-              <p className="font-extrabold text-foreground text-sm">{fiveStarCount} perfect</p>
+              <p className="font-extrabold text-foreground text-sm">
+                {isLoading ? "..." : `${fiveStarCount} perfect`}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              <ThumbsUp className="h-4 w-4" />
+              <Layers className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-muted-foreground font-medium">Helpful Impact</p>
-              <p className="font-extrabold text-foreground text-sm">{totalHelpful} upvotes</p>
+              <p className="text-muted-foreground font-medium">Prompts Reviewed</p>
+              <p className="font-extrabold text-foreground text-sm">
+                {isLoading ? "..." : `${distinctPromptsCount} unique`}
+              </p>
             </div>
           </div>
         </div>
@@ -302,7 +395,7 @@ export default function MyReviews() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search reviews by prompt, title, feedback keywords..."
+            placeholder="Search reviews by prompt name, feedback, AI tool..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
@@ -321,7 +414,9 @@ export default function MyReviews() {
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Rating Filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Rating:</span>
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+              Rating:
+            </span>
             <select
               value={ratingFilter}
               onChange={(e) => setRatingFilter(e.target.value)}
@@ -338,7 +433,9 @@ export default function MyReviews() {
 
           {/* Tool Filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Tool:</span>
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+              Tool:
+            </span>
             <select
               value={toolFilter}
               onChange={(e) => setToolFilter(e.target.value)}
@@ -346,7 +443,7 @@ export default function MyReviews() {
             >
               {availableTools.map((tool) => (
                 <option key={tool} value={tool}>
-                  {tool === "all" ? "All AI Tools" : tool}
+                  {tool === "all" ? "All Tools" : tool}
                 </option>
               ))}
             </select>
@@ -364,7 +461,6 @@ export default function MyReviews() {
               <option value="oldest">Oldest First</option>
               <option value="highest">Highest Rating</option>
               <option value="lowest">Lowest Rating</option>
-              <option value="helpful">Most Helpful</option>
             </select>
           </div>
 
@@ -440,26 +536,75 @@ export default function MyReviews() {
         </div>
       )}
 
-      {/* 3. Main Content Area */}
-      {filteredReviews.length === 0 ? (
+      {/* Error state */}
+      {error && (
+        <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => loadUserReviews()}
+            className="px-3 py-1 rounded-lg bg-destructive text-destructive-foreground font-semibold hover:bg-destructive/90 transition-all text-xs"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* 3. Main Content: Loading Skeletons vs Data */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((n) => (
+            <div
+              key={n}
+              className="rounded-2xl border border-border/80 bg-card/60 p-6 space-y-4 animate-pulse"
+            >
+              <div className="flex items-center gap-3 border-b border-border/40 pb-3">
+                <div className="h-12 w-12 rounded-xl bg-muted/60 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-24 bg-muted/60 rounded" />
+                  <div className="h-4 w-48 bg-muted/60 rounded" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-20 bg-muted/60 rounded" />
+                <div className="h-4 w-full bg-muted/60 rounded" />
+                <div className="h-3 w-3/4 bg-muted/60 rounded" />
+              </div>
+              <div className="h-4 w-32 bg-muted/60 rounded pt-2" />
+            </div>
+          ))}
+        </div>
+      ) : filteredReviews.length === 0 ? (
+        /* Empty State */
         <div className="rounded-2xl border border-dashed border-border/80 bg-card/50 p-12 text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center border border-primary/20">
             <MessageSquare className="h-8 w-8 text-primary" />
           </div>
           <div className="space-y-1">
             <h3 className="text-base sm:text-lg font-bold text-foreground">
-              {searchQuery || ratingFilter !== "all" || toolFilter !== "all"
-                ? "No matching reviews found"
-                : "No Reviews Given Yet"}
+              {reviews.length === 0
+                ? "No Reviews Submitted Yet"
+                : "No matching reviews found"}
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-              {searchQuery || ratingFilter !== "all" || toolFilter !== "all"
-                ? "Try adjusting your search criteria or resetting filters."
-                : "Try out AI prompts from the marketplace and share your thoughts to help creators and the community!"}
+              {reviews.length === 0
+                ? "You haven't written any reviews yet. Test prompts from the marketplace and share your experience to help the community!"
+                : "Try adjusting your search criteria or resetting active filters."}
             </p>
           </div>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-            {searchQuery || ratingFilter !== "all" || toolFilter !== "all" ? (
+            {reviews.length === 0 ? (
+              <Link
+                href="/allpromts"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
+              >
+                <Search className="h-4 w-4" />
+                <span>Explore Prompts to Review</span>
+              </Link>
+            ) : (
               <button
                 type="button"
                 onClick={() => {
@@ -471,14 +616,6 @@ export default function MyReviews() {
               >
                 Reset Filters
               </button>
-            ) : (
-              <Link
-                href="/allpromts"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
-              >
-                <Search className="h-4 w-4" />
-                <span>Explore Prompts to Review</span>
-              </Link>
             )}
           </div>
         </div>
@@ -486,47 +623,91 @@ export default function MyReviews() {
         /* Card / Feed View */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredReviews.map((review) => {
-            const isDeleting = deleteConfirmId === review.id;
+            const reviewId = review._id || review.id;
+            const prompt = review.prompt;
+            const promptTitle =
+              prompt?.title || review.promptTitle || "Prompt Template";
+            const promptCategory =
+              prompt?.category || review.category || "General";
+            const promptTool =
+              prompt?.aiModel || prompt?.aiTool || review.aiTool || "AI Prompt";
+            const promptThumbnail =
+              prompt?.thumbnail ||
+              prompt?.image ||
+              review.promptThumbnail ||
+              "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80";
+            const promptId = review.promptId || prompt?._id;
+
+            const rating = Number(review.rating) || 5;
+            const reviewMessage =
+              review.comment || review.message || "No comment provided.";
+            const reviewHeadline =
+              review.title ||
+              (review.message && review.message.length > 50
+                ? review.message.slice(0, 47) + "..."
+                : review.message || "User Review");
+
+            const isDeleting = deleteConfirmId === reviewId;
+            const isDeletingCurrent = isDeletingId === reviewId;
 
             return (
               <div
-                key={review.id}
+                key={reviewId}
                 className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/80 backdrop-blur-xl p-6 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/40 space-y-4"
               >
-                {/* Review Header: Prompt Context Banner */}
+                {/* Prompt Context Header */}
                 <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3.5">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
-                      src={review.promptThumbnail}
-                      alt={review.promptTitle}
-                      className="h-12 w-12 rounded-xl object-cover border border-border/60 shrink-0"
+                      src={promptThumbnail}
+                      alt={promptTitle}
+                      className="h-12 w-12 rounded-xl object-cover border border-border/60 shrink-0 bg-muted"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80";
+                      }}
                     />
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5">
-                        <span className="font-medium text-foreground/90">{review.category}</span>
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-0.5 flex-wrap">
+                        <span className="font-medium text-foreground/90">
+                          {promptCategory}
+                        </span>
                         <span>•</span>
-                        <span className="text-primary font-semibold">
-                          {review.aiModel || review.aiTool}
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${getToolBadgeStyle(
+                            promptTool
+                          )}`}
+                        >
+                          <Zap className="h-2.5 w-2.5 mr-0.5" />
+                          {promptTool}
                         </span>
                       </div>
-                      <Link
-                        href={`/allpromts/${review.promptId}`}
-                        className="font-bold text-sm text-foreground hover:text-primary transition-colors line-clamp-1 block"
-                      >
-                        {review.promptTitle}
-                      </Link>
+                      {promptId ? (
+                        <Link
+                          href={`/allpromts/${promptId}`}
+                          className="font-bold text-sm text-foreground hover:text-primary transition-colors line-clamp-1 block"
+                        >
+                          {promptTitle}
+                        </Link>
+                      ) : (
+                        <span className="font-bold text-sm text-foreground line-clamp-1 block">
+                          {promptTitle}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Actions Dropdown / Icon Buttons */}
+                  {/* Actions Bar */}
                   <div className="flex items-center gap-1 shrink-0">
-                    <Link
-                      href={`/allpromts/${review.promptId}`}
-                      className="p-1.5 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                      title="View Public Prompt"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
+                    {promptId && (
+                      <Link
+                        href={`/allpromts/${promptId}`}
+                        className="p-1.5 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                        title="View Public Prompt"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(review)}
@@ -537,7 +718,7 @@ export default function MyReviews() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDeleteConfirmId(review.id)}
+                      onClick={() => setDeleteConfirmId(reviewId)}
                       className="p-1.5 rounded-lg border border-border bg-background text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
                       title="Delete Review"
                     >
@@ -548,42 +729,41 @@ export default function MyReviews() {
 
                 {/* Review Body */}
                 <div className="space-y-2.5">
-                  {/* Star Rating Display */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
                           className={`h-4 w-4 ${
-                            star <= review.rating
+                            star <= rating
                               ? "text-amber-400 fill-amber-400"
-                              : "text-muted border-muted"
+                              : "text-muted-foreground/30"
                           }`}
                         />
                       ))}
                       <span className="text-xs font-bold text-foreground ml-1.5">
-                        {review.rating}.0
+                        {rating}.0
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      <span>{review.createdAt}</span>
+                      <span>{formatDate(review.createdAt || review.date)}</span>
                     </div>
                   </div>
 
-                  {/* Review Title */}
+                  {/* Review Headline */}
                   <h4 className="text-sm font-bold text-foreground leading-snug">
-                    "{review.title}"
+                    "{reviewHeadline}"
                   </h4>
 
-                  {/* Review Comment */}
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {review.comment}
+                  {/* Review Feedback Message */}
+                  <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line line-clamp-4">
+                    {reviewMessage}
                   </p>
                 </div>
 
-                {/* Delete Confirmation or Footer Info */}
+                {/* Delete Confirmation or Footer */}
                 {isDeleting ? (
                   <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 flex items-center justify-between gap-2 animate-in fade-in">
                     <span className="text-[11px] font-medium text-destructive">
@@ -592,10 +772,14 @@ export default function MyReviews() {
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => handleDeleteReview(review.id)}
-                        className="px-2.5 py-1 rounded-lg bg-destructive text-destructive-foreground text-[10px] font-bold hover:bg-destructive/90 transition-all"
+                        disabled={isDeletingCurrent}
+                        onClick={() => handleDeleteReview(reviewId)}
+                        className="px-2.5 py-1 rounded-lg bg-destructive text-destructive-foreground text-[10px] font-bold hover:bg-destructive/90 transition-all flex items-center gap-1 disabled:opacity-50"
                       >
-                        Yes, Delete
+                        {isDeletingCurrent && (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        )}
+                        <span>Yes, Delete</span>
                       </button>
                       <button
                         type="button"
@@ -611,7 +795,7 @@ export default function MyReviews() {
                     <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                       <ThumbsUp className="h-3.5 w-3.5 text-primary" />
                       <span>
-                        <strong className="text-foreground">{review.helpfulCount}</strong> people found this helpful
+                        Verified feedback stored in MongoDB
                       </span>
                     </div>
 
@@ -620,7 +804,7 @@ export default function MyReviews() {
                       onClick={() => handleOpenEdit(review)}
                       className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
                     >
-                      <span>Update</span>
+                      <span>Edit</span>
                       <Edit3 className="h-3 w-3" />
                     </button>
                   </div>
@@ -630,61 +814,115 @@ export default function MyReviews() {
           })}
         </div>
       ) : (
-        /* Table Layout View */
+        /* Table / List View */
         <div className="rounded-2xl border border-border/80 bg-card/80 backdrop-blur-xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground font-semibold">
-                  <th className="py-3.5 px-4">Prompt Title</th>
-                  <th className="py-3.5 px-4">AI Tool</th>
-                  <th className="py-3.5 px-4">Rating</th>
-                  <th className="py-3.5 px-4">Review Headline & Feedback</th>
-                  <th className="py-3.5 px-4">Date</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
+                  <th className="py-3.5 px-4 min-w-[240px]">Prompt Title</th>
+                  <th className="py-3.5 px-4 min-w-[130px]">AI Tool</th>
+                  <th className="py-3.5 px-4 min-w-[110px]">Rating</th>
+                  <th className="py-3.5 px-4 min-w-[300px]">Review Feedback</th>
+                  <th className="py-3.5 px-4 min-w-[110px]">Date</th>
+                  <th className="py-3.5 px-4 text-right min-w-[120px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
                 {filteredReviews.map((review) => {
-                  const isDeleting = deleteConfirmId === review.id;
+                  const reviewId = review._id || review.id;
+                  const prompt = review.prompt;
+                  const promptTitle =
+                    prompt?.title || review.promptTitle || "Prompt Template";
+                  const promptCategory =
+                    prompt?.category || review.category || "General";
+                  const promptTool =
+                    prompt?.aiModel ||
+                    prompt?.aiTool ||
+                    review.aiTool ||
+                    "AI Prompt";
+                  const promptThumbnail =
+                    prompt?.thumbnail ||
+                    prompt?.image ||
+                    review.promptThumbnail ||
+                    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80";
+                  const promptId = review.promptId || prompt?._id;
+
+                  const rating = Number(review.rating) || 5;
+                  const reviewMessage = review.comment || review.message || "";
+                  const reviewHeadline =
+                    review.title ||
+                    (review.message && review.message.length > 40
+                      ? review.message.slice(0, 37) + "..."
+                      : review.message || "Prompt Review");
+
+                  const isDeleting = deleteConfirmId === reviewId;
 
                   return (
-                    <tr key={review.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={reviewId}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           <img
-                            src={review.promptThumbnail}
-                            alt={review.promptTitle}
-                            className="h-10 w-10 rounded-lg object-cover border border-border/60 shrink-0"
+                            src={promptThumbnail}
+                            alt={promptTitle}
+                            className="h-10 w-10 rounded-lg object-cover border border-border/60 shrink-0 bg-muted"
+                            onError={(e) => {
+                              e.target.src =
+                                "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80";
+                            }}
                           />
                           <div className="max-w-[200px]">
-                            <p className="font-bold text-foreground truncate">{review.promptTitle}</p>
-                            <span className="text-[10px] text-muted-foreground">{review.category}</span>
+                            {promptId ? (
+                              <Link
+                                href={`/allpromts/${promptId}`}
+                                className="font-bold text-foreground hover:text-primary truncate block transition-colors"
+                              >
+                                {promptTitle}
+                              </Link>
+                            ) : (
+                              <p className="font-bold text-foreground truncate">
+                                {promptTitle}
+                              </p>
+                            )}
+                            <span className="text-[10px] text-muted-foreground">
+                              {promptCategory}
+                            </span>
                           </div>
                         </div>
                       </td>
 
                       <td className="py-4 px-4">
-                        <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${getToolBadgeStyle(
+                            promptTool
+                          )}`}
+                        >
                           <Zap className="h-3 w-3" />
-                          {review.aiModel || review.aiTool}
+                          {promptTool}
                         </span>
                       </td>
 
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-1 font-bold text-amber-400">
                           <Star className="h-3.5 w-3.5 fill-amber-400" />
-                          <span>{review.rating}.0</span>
+                          <span>{rating}.0</span>
                         </div>
                       </td>
 
-                      <td className="py-4 px-4 max-w-[300px]">
-                        <p className="font-bold text-foreground truncate">{review.title}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{review.comment}</p>
+                      <td className="py-4 px-4 max-w-[320px]">
+                        <p className="font-bold text-foreground truncate">
+                          {reviewHeadline}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {reviewMessage}
+                        </p>
                       </td>
 
                       <td className="py-4 px-4 text-muted-foreground whitespace-nowrap">
-                        {review.createdAt}
+                        {formatDate(review.createdAt || review.date)}
                       </td>
 
                       <td className="py-4 px-4 text-right">
@@ -692,8 +930,8 @@ export default function MyReviews() {
                           <div className="inline-flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => handleDeleteReview(review.id)}
-                              className="px-2 py-1 rounded-md bg-destructive text-destructive-foreground text-[10px] font-bold"
+                              onClick={() => handleDeleteReview(reviewId)}
+                              className="px-2 py-1 rounded-md bg-destructive text-destructive-foreground text-[10px] font-bold hover:bg-destructive/90"
                             >
                               Confirm
                             </button>
@@ -707,13 +945,15 @@ export default function MyReviews() {
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1.5">
-                            <Link
-                              href={`/allpromts/${review.promptId}`}
-                              className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
-                              title="View Prompt"
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Link>
+                            {promptId && (
+                              <Link
+                                href={`/allpromts/${promptId}`}
+                                className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                                title="View Prompt"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Link>
+                            )}
 
                             <button
                               type="button"
@@ -726,7 +966,7 @@ export default function MyReviews() {
 
                             <button
                               type="button"
-                              onClick={() => setDeleteConfirmId(review.id)}
+                              onClick={() => setDeleteConfirmId(reviewId)}
                               className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
                               title="Delete Review"
                             >
@@ -750,10 +990,18 @@ export default function MyReviews() {
           <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl space-y-6">
             <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4">
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-primary">Edit Feedback</span>
-                <h3 className="text-lg font-bold text-foreground">Update Your Review</h3>
+                <span className="text-xs font-semibold text-primary">
+                  Real-Time Edit
+                </span>
+                <h3 className="text-lg font-bold text-foreground">
+                  Update Your Review
+                </h3>
                 <p className="text-xs text-muted-foreground line-clamp-1">
-                  For "{editingReview.promptTitle}"
+                  For "
+                  {editingReview.prompt?.title ||
+                    editingReview.promptTitle ||
+                    "Prompt"}
+                  "
                 </p>
               </div>
 
@@ -767,9 +1015,11 @@ export default function MyReviews() {
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
-              {/* Star Selection */}
+              {/* Star Rating Picker */}
               <div className="space-y-1.5">
-                <label className="font-bold text-foreground block">Star Rating</label>
+                <label className="font-bold text-foreground block">
+                  Star Rating
+                </label>
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -782,7 +1032,7 @@ export default function MyReviews() {
                         className={`h-6 w-6 ${
                           star <= editRating
                             ? "text-amber-400 fill-amber-400"
-                            : "text-muted-foreground/40"
+                            : "text-muted-foreground/30"
                         }`}
                       />
                     </button>
@@ -793,9 +1043,11 @@ export default function MyReviews() {
                 </div>
               </div>
 
-              {/* Review Headline */}
+              {/* Review Title Headline */}
               <div className="space-y-1.5">
-                <label className="font-bold text-foreground block">Review Title</label>
+                <label className="font-bold text-foreground block">
+                  Review Headline
+                </label>
                 <input
                   type="text"
                   required
@@ -806,9 +1058,11 @@ export default function MyReviews() {
                 />
               </div>
 
-              {/* Review Detailed Feedback */}
+              {/* Review Message */}
               <div className="space-y-1.5">
-                <label className="font-bold text-foreground block">Detailed Comments</label>
+                <label className="font-bold text-foreground block">
+                  Feedback & Comments
+                </label>
                 <textarea
                   required
                   rows={4}
@@ -829,9 +1083,13 @@ export default function MyReviews() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
+                  disabled={isSubmittingEdit}
+                  className="px-5 py-2 rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  Save Changes
+                  {isSubmittingEdit && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  <span>{isSubmittingEdit ? "Saving..." : "Save Changes"}</span>
                 </button>
               </div>
             </form>
@@ -846,17 +1104,6 @@ export default function MyReviews() {
             <Sparkles className="h-4 w-4" />
           </div>
           <span className="font-semibold">{toastMessage}</span>
-
-          {lastRemovedReview && (
-            <button
-              type="button"
-              onClick={handleUndoDelete}
-              className="ml-2 font-bold text-primary hover:underline"
-            >
-              Undo
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => setToastMessage(null)}

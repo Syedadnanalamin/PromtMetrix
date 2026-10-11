@@ -18,7 +18,7 @@ const MyReviewsPage = async () => {
 
   return (
     <div className="w-full">
-      <MyReviews />
+      <MyReviews session={session} />
     </div>
   );
 };
