@@ -4,6 +4,7 @@ import UserDashboardAnalytics from '@/components/dashboard/user/DashboardAnalyti
 import CreatorDashboardAnalytics from '@/components/dashboard/creator/DashboardAnalytics/DashboardAnalytics';
 import AdminDashboardAnalytics from '@/components/dashboard/admin/DashboardAnalytics/DashboardAnalytics';
 import { getUserDashboardAnalytics } from '@/lib/actions/dashboard/userDashboardAnalytics';
+import getPromtbyuser from '@/lib/actions/promts/getpromtsbyuser';
 
 export const metadata = {
   title: 'Dashboard Overview | PromptMatrix',
@@ -13,8 +14,9 @@ export const metadata = {
 const DashboardHomePage = async () => {
   const session = await getServerSession();
   const userType = session?.user?.userType || 'user';
+  const userId = session?.user?.id || session?.user?._id;
 
-  const userAnalytics = await getUserDashboardAnalytics(session?.user?.id);
+  const userAnalytics = await getUserDashboardAnalytics(userId);
   console.log("🚀 ~ DashboardHomePage ~ userAnalytics:", userAnalytics);
 
   // Render role-specific analytical reports based on session userType
@@ -23,7 +25,8 @@ const DashboardHomePage = async () => {
   }
 
   if (userType === 'creator') {
-    return <CreatorDashboardAnalytics session={session} />;
+    const creatorPrompts = await getPromtbyuser(userId);
+    return <CreatorDashboardAnalytics session={session} prompts={creatorPrompts} />;
   }
 
   return <UserDashboardAnalytics session={session} analytics={userAnalytics?.data} />;

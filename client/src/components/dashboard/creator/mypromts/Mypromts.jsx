@@ -25,80 +25,18 @@ import {
   Flame,
   X,
 } from "lucide-react";
+import { deletePromt } from "@/lib/actions/promts/deletepromt";
 
 export default function CreatorMyPromts({ session, data = [] }) {
   const user = session?.user;
   const creatorName = user?.name || "Creator";
 
-  // Creator prompt inventory initialized from live data
-  const [prompts, setPrompts] = useState(Array.isArray(data) && data.length > 0 ? data : [
-    {
-      id: "cp-1",
-      title: "SaaS Cold Email Engine (3-Step B2B Personalization)",
-      category: "Marketing & Copywriting",
-      aiTool: "ChatGPT (GPT-4o)",
-      difficulty: "Advanced",
-      visibility: "Public",
-      status: "approved",
-      copies: 642,
-      bookmarks: 182,
-      rating: 4.9,
-      reviewsCount: 42,
-      createdAt: "2025-02-10",
-      thumbnail: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80",
-    },
-    {
-      id: "cp-2",
-      title: "Clean Next.js 15 Full-Stack Architecture Generator",
-      category: "Coding & Development",
-      aiTool: "Claude 3.5 Sonnet",
-      difficulty: "Pro",
-      visibility: "Private",
-      status: "approved",
-      copies: 518,
-      bookmarks: 140,
-      rating: 5.0,
-      reviewsCount: 38,
-      createdAt: "2025-02-14",
-      thumbnail: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=400&q=80",
-    },
-    {
-      id: "cp-3",
-      title: "Ultra-Realistic 8K Cyberpunk Cinematic Portrait",
-      category: "Art & Image Generation",
-      aiTool: "Midjourney v6",
-      difficulty: "Intermediate",
-      visibility: "Public",
-      status: "approved",
-      copies: 382,
-      bookmarks: 76,
-      rating: 4.8,
-      reviewsCount: 19,
-      createdAt: "2025-02-17",
-      thumbnail: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=400&q=80",
-    },
-    {
-      id: "cp-4",
-      title: "SEO Keyword Clustering & Content Gap Analyzer",
-      category: "Marketing & Copywriting",
-      aiTool: "Google Gemini 1.5",
-      difficulty: "Intermediate",
-      visibility: "Private",
-      status: "pending",
-      copies: 198,
-      bookmarks: 30,
-      rating: 4.7,
-      reviewsCount: 8,
-      createdAt: "2025-02-21",
-      thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&q=80",
-    },
-  ]);
-
-  React.useEffect(() => {
-    if (Array.isArray(data) && data.length > 0) {
-      setPrompts(data);
-    }
-  }, [data]);
+  // Creator prompt inventory derived from dynamic data
+  const [deletedIds, setDeletedIds] = useState([]);
+  const prompts = React.useMemo(
+    () => (Array.isArray(data) ? data.filter((p) => !deletedIds.includes(p._id || p.id)) : []),
+    [data, deletedIds]
+  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -118,8 +56,9 @@ export default function CreatorMyPromts({ session, data = [] }) {
     return matchesSearch && matchesStatus && matchesTool;
   });
 
-  const handleDelete = (id) => {
-    setPrompts((prev) => prev.filter((p) => (p._id || p.id) !== id));
+  const handleDelete = async (id) => {
+    await deletePromt(id);
+    setDeletedIds((prev) => [...prev, id]);
     setDeleteConfirmId(null);
   };
 
