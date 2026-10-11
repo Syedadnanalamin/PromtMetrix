@@ -28,8 +28,6 @@ export default function UserDashboardAnalytics({ session, analytics }) {
   const userEmail = user?.email || "";
   const isPremium = user?.isPremium || false;
 
-  console.log("this is the analytics upcoming data console", analytics);
-
   const myPromptsCount = analytics?.myPromts ?? 0;
   const savedPromptsCount = analytics?.savedPromts ?? 0;
   const reviewsGivenCount = analytics?.reviewsGiven ?? 0;
@@ -202,13 +200,15 @@ export default function UserDashboardAnalytics({ session, analytics }) {
           </div>
 
           {!isPremium && (
-            <Link
-              href="/payment"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
-            >
-              <Crown className="h-3.5 w-3.5" />
-              <span>Upgrade to Pro ($5 Lifetime) &rarr;</span>
-            </Link>
+            <form action="/api/checkout_sessions" method="POST" className="inline-block">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline cursor-pointer"
+              >
+                <Crown className="h-3.5 w-3.5" />
+                <span>Upgrade to Pro ($5 Lifetime) &rarr;</span>
+              </button>
+            </form>
           )}
         </div>
       </div>
@@ -257,8 +257,8 @@ export default function UserDashboardAnalytics({ session, analytics }) {
                   type="button"
                   onClick={() => setActiveTab("recent")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "recent"
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                 >
                   Saved Prompts (Bookmarks)
@@ -267,8 +267,8 @@ export default function UserDashboardAnalytics({ session, analytics }) {
                   type="button"
                   onClick={() => setActiveTab("submissions")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeTab === "submissions"
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}
                 >
                   My Submissions
@@ -435,13 +435,15 @@ export default function UserDashboardAnalytics({ session, analytics }) {
                 <span className="text-xl font-extrabold text-foreground">$5</span>
                 <span className="text-xs text-muted-foreground"> / One-time payment</span>
               </div>
-              <Link
-                href="/payment"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
-              >
-                <span>Upgrade Now</span>
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
+              <form action="/api/checkout_sessions" method="POST">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all cursor-pointer"
+                >
+                  <span>Upgrade Now</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
+              </form>
             </div>
           </div>
 

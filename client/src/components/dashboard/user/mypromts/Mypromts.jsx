@@ -308,13 +308,15 @@ export default function UserMyPromts({ session, data = [] }) {
           </div>
 
           {!isPremium && (
-            <Link
-              href="/payment"
-              className="inline-flex items-center gap-1.5 font-bold text-amber-400 hover:text-amber-300 transition-colors self-start sm:self-auto"
-            >
-              <Crown className="h-3.5 w-3.5" />
-              <span>Unlock Unlimited Submissions ($5) &rarr;</span>
-            </Link>
+            <form action="/api/checkout_sessions" method="POST" className="self-start sm:self-auto">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+              >
+                <Crown className="h-3.5 w-3.5" />
+                <span>Unlock Unlimited Submissions ($5) &rarr;</span>
+              </button>
+            </form>
           )}
         </div>
       </div>

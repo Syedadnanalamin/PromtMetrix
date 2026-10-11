@@ -197,13 +197,15 @@ export default function Profile({ session }) {
           {/* Quick CTAs */}
           <div className="flex flex-wrap items-center gap-3">
             {!isPremiumUser && (
-              <Link
-                href="/payment"
-                className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-orange-600 transition-all active:scale-98"
-              >
-                <Crown className="h-4 w-4" />
-                <span>Upgrade to Pro ($5)</span>
-              </Link>
+              <form action="/api/checkout_sessions" method="POST" className="inline-block">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-orange-600 transition-all active:scale-98 cursor-pointer"
+                >
+                  <Crown className="h-4 w-4" />
+                  <span>Upgrade to Pro ($5)</span>
+                </button>
+              </form>
             )}
 
             <button
@@ -424,13 +426,15 @@ export default function Profile({ session }) {
                     <span className="text-xl font-extrabold text-foreground">$5</span>
                     <span className="text-xs text-muted-foreground"> / One-time</span>
                   </div>
-                  <Link
-                    href="/payment"
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
-                  >
-                    <span>Upgrade Now</span>
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
+                  <form action="/api/checkout_sessions" method="POST">
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all cursor-pointer"
+                    >
+                      <span>Upgrade Now</span>
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </button>
+                  </form>
                 </div>
               </div>
             ) : (
@@ -689,15 +693,15 @@ export default function Profile({ session }) {
               </ul>
 
               {!isPremiumUser && (
-                <div className="pt-2">
-                  <Link
-                    href="/payment"
-                    className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
+                <form action="/api/checkout_sessions" method="POST" className="pt-2">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 transition-all cursor-pointer"
                   >
                     <span>Upgrade for $5 via Stripe</span>
                     <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
+                  </button>
+                </form>
               )}
             </div>
           </div>
