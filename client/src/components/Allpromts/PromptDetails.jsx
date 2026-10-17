@@ -97,15 +97,11 @@ export default function PromptDetails({ details, session: serverSession, promtid
 
 
     // saving copypromts details by posting method while clicking copy promts
-    const data = {
-
-      userId: user.id,
-      promptId: promtid
+    try {
+      await saveCopycount({ promptId: promtid || details?._id });
+    } catch (err) {
+      console.error("Failed to update copy count:", err);
     }
-
-
-    const result = await saveCopycount(data);
-
   };
 
   // Handle Bookmark Toggle

@@ -181,18 +181,17 @@ const deleteReview = async (req, res) => {
 
 const saveCopycount = async (req, res) => {
     try {
-
-        const data = req.body;
-        const result = await copiesCollection.insertOne(data);
-        res.status(201).json({ success: true, message: "copy promt data stored" });
+        const { promptId } = req.body;
+        const result = await allPromtsCollection.updateOne(
+            { _id: new ObjectId(promptId) },
+            { $inc: { copyCount: 1 } }
+        );
+        res.status(200).json({ success: true, result });
+    } catch (error) {
+        console.error("Error updating copy count:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    catch (error) {
-
-        console.error("Error in saving copy promt data");
-        res.status(500).json({ success: false, message: "copy promt data saving failed" });
-    }
-}
+};
 
 const deleteSinglePromt = async (req, res) => {
     try {

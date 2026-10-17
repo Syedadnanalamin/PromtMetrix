@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Copy, Check, Eye, Zap, Tag, Layers, Sparkles, Lock, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { saveCopycount } from "@/lib/actions/promts/saveCopycount";
 
 // Difficulty badge color lookup object
 const difficultyColors = {
@@ -16,15 +17,27 @@ const difficultyColors = {
 
 export default function PromtCard({ prompt }) {
   const [copied, setCopied] = useState(false);
+  const [copyCount, setCopyCount] = useState(prompt?.copyCount ?? 0);
 
-  const handleCopy = (e) => {
+  useEffect(() => {
+    setCopyCount(prompt?.copyCount ?? 0);
+  }, [prompt?.copyCount]);
+
+  const handleCopy = async (e) => {
     e.stopPropagation();
     const textToCopy = prompt?.content || prompt?.description || prompt?.title || "";
     if (!textToCopy) return;
 
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setCopyCount((prev) => prev + 1);
+      setTimeout(() => setCopied(false), 2000);
+
+      await saveCopycount({ promptId: prompt?._id });
+    } catch (err) {
+      console.error("Failed to copy prompt or increment copy count:", err);
+    }
   };
 
   const difficultyStyle =
@@ -113,7 +126,7 @@ export default function PromtCard({ prompt }) {
           <div className="flex items-center justify-between border-t border-border/50 pt-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1 text-[11px]">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <strong className="text-foreground">{prompt?.copyCount ?? 0}</strong> copies
+              <strong className="text-foreground">{copyCount}</strong> copies
             </span>
             <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary capitalize">
               {prompt?.status || "approved"}
