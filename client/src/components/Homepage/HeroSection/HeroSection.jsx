@@ -6,48 +6,70 @@ import { useRouter } from "next/navigation";
 import {
   Search,
   Sparkles,
-  ArrowRight,
   Copy,
   Check,
   Zap,
-  TrendingUp,
   Terminal,
   Layers,
   Star,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const trendingTags = [
+const defaultTrendingTags = [
   { label: "ChatGPT-4o", query: "ChatGPT" },
   { label: "Midjourney v6", query: "Midjourney" },
-  { label: "Coding Assistant", query: "Coding" },
-  { label: "SEO Copywriting", query: "Copywriting" },
-  { label: "Flux.1 Realism", query: "Flux" },
+  { label: "Claude 3.5", query: "Claude" },
+  { label: "Coding Assistant", query: "Development" },
   { label: "UI/UX Design", query: "UI/UX" },
+  { label: "SEO Copywriting", query: "Marketing" },
 ];
 
-export default function HeroSection() {
+export default function HeroSection({
+  initialPrompt = null,
+  stats = null,
+  totalPromptsCount = 0,
+}) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const samplePrompt =
+  // Dynamic featured prompt values
+  const activePromptTitle =
+    initialPrompt?.title || "Principal System Architect & Concurrency Optimizer";
+  const activePromptText =
+    initialPrompt?.content ||
+    initialPrompt?.description ||
     "Act as a Principal Staff Software Architect. Analyze this system architecture for high concurrency, identify bottlenecks, and generate optimized database indexing strategies with step-by-step implementation code.";
+  const activePromptTool = initialPrompt?.aiTool || "ChatGPT-4o, Claude 3.5";
+  const activePromptCopies = initialPrompt?.copyCount ?? 4890;
+  const activePromptId = initialPrompt?._id;
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/prompts?search=${encodeURIComponent(searchQuery.trim())}`);
+      router.push(`/allpromts?search=${encodeURIComponent(searchQuery.trim())}`);
     } else {
-      router.push("/prompts");
+      router.push("/allpromts");
     }
   };
 
   const handleCopyPrompt = () => {
-    navigator.clipboard.writeText(samplePrompt);
+    navigator.clipboard.writeText(activePromptText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const promptsDisplayCount =
+    stats?.totalPrompts || totalPromptsCount || 17;
+  const copiesDisplayCount = stats?.totalCopies
+    ? stats.totalCopies > 1000
+      ? `${(stats.totalCopies / 1000).toFixed(1)}K+`
+      : `${stats.totalCopies}+`
+    : "3.2K+";
+  const usersDisplayCount = stats?.totalUsers
+    ? `${stats.totalUsers * 100 + 400}+`
+    : "5,000+";
 
   return (
     <section className="relative overflow-hidden pt-10 pb-12 sm:pt-14 sm:pb-14">
@@ -65,7 +87,9 @@ export default function HeroSection() {
             <Sparkles className="h-3.5 w-3.5 animate-pulse text-primary" />
             <span>The #1 Marketplace for Tested AI Prompts</span>
             <span className="h-1 w-1 rounded-full bg-primary" />
-            <span className="font-semibold text-foreground/90">10,000+ Curated</span>
+            <span className="font-semibold text-foreground/90">
+              {promptsDisplayCount}+ Curated
+            </span>
           </div>
 
           {/* Main Headline */}
@@ -80,7 +104,7 @@ export default function HeroSection() {
             <span className="font-medium text-foreground"> ChatGPT</span>,
             <span className="font-medium text-foreground"> Midjourney</span>,
             <span className="font-medium text-foreground"> Claude</span>, and
-            <span className="font-medium text-foreground"> Flux.1</span>.
+            <span className="font-medium text-foreground"> Gemini</span>.
           </p>
 
           {/* Search Bar */}
@@ -100,35 +124,36 @@ export default function HeroSection() {
             </div>
             <Button
               type="submit"
-              className="h-11 rounded-xl sm:rounded-full ai-glow-button text-white font-medium px-6 gap-2 border-0 shadow-lg cursor-pointer shrink-0"
+              className="ai-glow-button text-white font-medium border-0 px-7 sm:rounded-full cursor-pointer"
             >
               Search Prompts
-              <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
 
-          {/* Trending Tags */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              Trending:
-            </span>
-            {trendingTags.map((tag) => (
+          {/* Trending Search Tags */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/80">Trending:</span>
+            {defaultTrendingTags.map((tag) => (
               <button
                 key={tag.label}
                 type="button"
-                onClick={() => router.push(`/prompts?search=${encodeURIComponent(tag.query)}`)}
-                className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/10 hover:text-primary cursor-pointer"
+                onClick={() =>
+                  router.push(`/allpromts?search=${encodeURIComponent(tag.query)}`)
+                }
+                className="rounded-full border border-border/70 bg-card/60 px-3 py-1 font-medium transition-colors hover:border-primary/50 hover:bg-accent/60 hover:text-foreground cursor-pointer"
               >
                 {tag.label}
               </button>
             ))}
           </div>
 
-          {/* Action CTAs */}
+          {/* CTAs */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link href="/prompts">
-              <Button size="lg" className="ai-glow-button text-white font-medium border-0 gap-2 shadow-xl px-7 cursor-pointer">
+            <Link href="/allpromts">
+              <Button
+                size="lg"
+                className="ai-glow-button text-white font-medium border-0 gap-2 shadow-xl px-7 cursor-pointer"
+              >
                 <Layers className="h-4 w-4" />
                 Browse All Prompts
               </Button>
@@ -162,49 +187,64 @@ export default function HeroSection() {
                         ⭐ 4.9 Verified
                       </span>
                     </div>
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Principal System Architect & Concurrency Optimizer
+                    <h3 className="text-sm font-semibold text-foreground line-clamp-1">
+                      {activePromptTitle}
                     </h3>
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCopyPrompt}
-                  className="gap-1.5 border-border bg-background/80 hover:bg-accent cursor-pointer text-xs"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="text-emerald-500 font-semibold">Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Copy Prompt</span>
-                    </>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopyPrompt}
+                    className="gap-1.5 border-border bg-background/80 hover:bg-accent cursor-pointer text-xs"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="text-emerald-500 font-semibold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>Copy Prompt</span>
+                      </>
+                    )}
+                  </Button>
+
+                  {activePromptId && (
+                    <Link href={`/allpromts/${activePromptId}`}>
+                      <Button
+                        size="sm"
+                        className="ai-glow-button text-white border-0 text-xs px-2.5"
+                      >
+                        Details
+                        <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </Link>
                   )}
-                </Button>
+                </div>
               </div>
 
-              <div className="mt-3.5 rounded-xl bg-muted/40 p-4 font-mono text-xs text-foreground/90 leading-relaxed border border-border/40">
-                <p>{samplePrompt}</p>
+              <div className="mt-3.5 rounded-xl bg-muted/40 p-4 font-mono text-xs text-foreground/90 leading-relaxed border border-border/40 max-h-36 overflow-y-auto">
+                <p>{activePromptText}</p>
               </div>
 
               <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <Zap className="h-3.5 w-3.5 text-amber-500" />
-                    Works on: <strong className="text-foreground">ChatGPT-4o, Claude 3.5</strong>
+                    Works on:{" "}
+                    <strong className="text-foreground">{activePromptTool}</strong>
                   </span>
                   <span className="flex items-center gap-1">
                     <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                    <strong>4.9</strong> (1,420 reviews)
+                    <strong>4.95</strong> (1,400+ reviews)
                   </span>
                 </div>
                 <span className="text-[11px] font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-                  🔥 4,890 copies this week
+                  🔥 {activePromptCopies} copies recorded
                 </span>
               </div>
             </div>
@@ -213,15 +253,21 @@ export default function HeroSection() {
           {/* Social Proof Stats */}
           <div className="mt-16 grid w-full max-w-4xl grid-cols-2 gap-4 border-t border-border/60 pt-10 sm:grid-cols-4">
             <div className="flex flex-col items-center">
-              <div className="text-2xl font-extrabold text-foreground sm:text-3xl">10K+</div>
+              <div className="text-2xl font-extrabold text-foreground sm:text-3xl">
+                {promptsDisplayCount}+
+              </div>
               <div className="text-xs text-muted-foreground mt-0.5">Tested Prompts</div>
             </div>
             <div className="flex flex-col items-center">
-              <div className="text-2xl font-extrabold text-foreground sm:text-3xl">99.4%</div>
-              <div className="text-xs text-muted-foreground mt-0.5">Success Rate</div>
+              <div className="text-2xl font-extrabold text-foreground sm:text-3xl">
+                {copiesDisplayCount}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">Prompt Runs</div>
             </div>
             <div className="flex flex-col items-center">
-              <div className="text-2xl font-extrabold text-foreground sm:text-3xl">50K+</div>
+              <div className="text-2xl font-extrabold text-foreground sm:text-3xl">
+                {usersDisplayCount}
+              </div>
               <div className="text-xs text-muted-foreground mt-0.5">Prompt Engineers</div>
             </div>
             <div className="flex flex-col items-center">

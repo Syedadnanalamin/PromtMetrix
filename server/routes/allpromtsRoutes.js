@@ -11,11 +11,19 @@ const {
     getReviewsByUser,
     updateReview,
     deleteReview,
-    updatePromptStatus
+    updatePromptStatus,
+    getAllReviews,
+    getTopCreators
 } = require('../controllers/allPromtsController');
 
 // gettin all promts
 router.get("/", getAllpromts);
+
+// public all reviews for homepage/feed
+router.get("/reviews/all", getAllReviews);
+
+// top creators for homepage
+router.get("/creators/top", getTopCreators);
 
 // getting prompts by user (must be before /:id)
 router.get("/byuser/:id", getPromtbyuser);

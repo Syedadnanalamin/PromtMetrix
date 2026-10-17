@@ -9,52 +9,52 @@ import {
   Users,
 } from "lucide-react";
 
-const features = [
-  {
-    icon: CheckCircle2,
-    title: "100% Battle-Tested Quality",
-    description:
-      "Every prompt on PromptMatrix undergoes rigorous testing across multiple iterations to guarantee zero hallucinations and production-grade outputs.",
-    badge: "Verified Outputs",
-  },
-  {
-    icon: Cpu,
-    title: "Multi-Model Compatibility",
-    description:
-      "Precision-tuned prompts designed specifically for ChatGPT-4o, Claude 3.5 Sonnet, Midjourney v6, Flux.1, and Google Gemini Pro.",
-    badge: "5+ AI Engines",
-  },
-  {
-    icon: Zap,
-    title: "Instant 1-Click Copy & Paste",
-    description:
-      "Copy system prompts, variables, negative prompt weights, and parameter presets in a single click with formatted syntax.",
-    badge: "Zero Friction",
-  },
-  {
-    icon: Coins,
-    title: "Creator Monetization & Royalties",
-    description:
-      "Prompt engineers earn up to 85% revenue share on premium prompt sales with instant Stripe payouts and transparent analytics.",
-    badge: "Earn Money",
-  },
-  {
-    icon: Users,
-    title: "Vibrant Prompt Community",
-    description:
-      "Read genuine developer reviews, copy counts, performance ratings, and join discussions with 50,000+ prompt creators worldwide.",
-    badge: "50K+ Builders",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Enterprise-Grade Reliability",
-    description:
-      "Built with Next.js 16, Better-Auth security, role-based access control (RBAC), and MongoDB aggregation pipeline architecture.",
-    badge: "Secure Platform",
-  },
-];
+export default function WhyChooseUs({ totalPrompts = 17 }) {
+  const features = [
+    {
+      icon: CheckCircle2,
+      title: "100% Battle-Tested Quality",
+      description:
+        "Every prompt on PromptMatrix undergoes rigorous testing across multiple iterations to guarantee zero hallucinations and production-grade outputs.",
+      badge: "Verified Outputs",
+    },
+    {
+      icon: Cpu,
+      title: "Multi-Model Compatibility",
+      description:
+        "Precision-tuned prompts designed specifically for ChatGPT-4o, Claude 3.5 Sonnet, Midjourney v6, Flux.1, and Google Gemini Pro.",
+      badge: "5+ AI Engines",
+    },
+    {
+      icon: Zap,
+      title: "Instant 1-Click Copy & Paste",
+      description:
+        "Copy system prompts, variables, negative prompt weights, and parameter presets in a single click with formatted syntax.",
+      badge: "Zero Friction",
+    },
+    {
+      icon: Coins,
+      title: "Creator Monetization & Royalties",
+      description:
+        "Prompt engineers earn up to 85% revenue share on premium prompt sales with instant Stripe payouts and transparent analytics.",
+      badge: "Earn Money",
+    },
+    {
+      icon: Users,
+      title: "Vibrant Prompt Community",
+      description:
+        `Read genuine developer reviews, copy counts, performance ratings, and explore over ${totalPrompts || 17}+ curated workflows.`,
+      badge: `${totalPrompts || 17}+ Assets`,
+    },
+    {
+      icon: ShieldCheck,
+      title: "Enterprise-Grade Reliability",
+      description:
+        "Built with Next.js 16, Better-Auth security, role-based access control (RBAC), and MongoDB aggregation pipeline architecture.",
+      badge: "Secure Platform",
+    },
+  ];
 
-export default function WhyChooseUs() {
   return (
     <section className="relative py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
       {/* Background Glow */}

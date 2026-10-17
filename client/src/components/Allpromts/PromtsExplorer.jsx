@@ -1,17 +1,35 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, X, SlidersHorizontal, RotateCcw, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import PromtCard from "./PromtCard";
 
 export default function PromtsExplorer({ initialPrompts = [] }) {
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTool, setSelectedTool] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
+
+  // Sync state when URL query params change (e.g. from Header Searchbar)
+  useEffect(() => {
+    const searchFromUrl = searchParams.get("search") || searchParams.get("q");
+    if (searchFromUrl !== null && searchFromUrl !== undefined) {
+      setSearchTerm(searchFromUrl);
+    }
+    const toolFromUrl = searchParams.get("tool");
+    if (toolFromUrl) {
+      setSelectedTool(toolFromUrl);
+    }
+    const categoryFromUrl = searchParams.get("category");
+    if (categoryFromUrl) {
+      setSelectedCategory(categoryFromUrl);
+    }
+  }, [searchParams]);
 
   // Extract unique categories & AI tools dynamically from available prompts
   const categories = useMemo(() => {

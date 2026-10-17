@@ -2,15 +2,15 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Sparkles,
-  Star,
   Award,
   ArrowRight,
   BadgeCheck,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getTopCreators } from "@/lib/actions/promts/getTopCreators";
 
-export const initialTopCreators = [
+export const fallbackTopCreators = [
   {
     id: "creator-1",
     name: "Alex Rivera",
@@ -61,7 +61,33 @@ export const initialTopCreators = [
   },
 ];
 
-export default function TopCreators() {
+export default async function TopCreators({ initialCreators = null }) {
+  let creators = initialCreators;
+  if (!creators) {
+    try {
+      creators = await getTopCreators();
+    } catch (e) {
+      console.error("Failed to load top creators in TopCreators:", e);
+      creators = [];
+    }
+  }
+
+  const dbCreators = Array.isArray(creators) ? creators : creators?.data || [];
+
+  // Merge dynamic DB creators with fallback to guarantee 4 cards minimum
+  const seenNames = new Set(dbCreators.map((c) => c.name.toLowerCase()));
+  const mergedCreators = [...dbCreators];
+
+  for (const fallback of fallbackTopCreators) {
+    if (mergedCreators.length >= 4) break;
+    if (!seenNames.has(fallback.name.toLowerCase())) {
+      seenNames.add(fallback.name.toLowerCase());
+      mergedCreators.push(fallback);
+    }
+  }
+
+  const displayCreators = mergedCreators.slice(0, 4);
+
   return (
     <section className="relative py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/20 border-t border-border/40">
       <div className="container mx-auto max-w-7xl px-2 sm:px-4 lg:px-6">
@@ -80,7 +106,7 @@ export default function TopCreators() {
             </p>
           </div>
 
-          <Link href="/prompts">
+          <Link href="/allpromts">
             <Button
               variant="outline"
               className="gap-2 border-border/80 bg-background/80 hover:bg-accent text-sm font-medium self-start md:self-auto cursor-pointer"
@@ -93,13 +119,13 @@ export default function TopCreators() {
 
         {/* Creators Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {initialTopCreators.map((creator) => (
+          {displayCreators.map((creator) => (
             <div
-              key={creator.id}
+              key={creator.id || creator._id}
               className="glass-card group relative flex flex-col items-center text-center rounded-2xl border border-border/70 bg-card/80 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
             >
               <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
-                {creator.badge}
+                {creator.badge || "Verified"}
               </span>
 
               <div className="relative mt-2 mb-4">
@@ -122,7 +148,7 @@ export default function TopCreators() {
               <p className="text-xs text-muted-foreground font-medium mt-0.5">
                 {creator.role}
               </p>
-              <span className="mt-2 inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground/80">
+              <span className="mt-2 inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground/80 max-w-full truncate">
                 {creator.specialty}
               </span>
 
@@ -138,13 +164,16 @@ export default function TopCreators() {
                 <div>
                   <div className="flex items-center justify-center gap-0.5 font-bold text-amber-500">
                     <Star className="h-3 w-3 fill-amber-400" />
-                    {creator.rating}
+                    {creator.rating || 4.95}
                   </div>
                   <div className="text-[10px] text-muted-foreground">Rating</div>
                 </div>
               </div>
 
-              <Link href={`/prompts?search=${encodeURIComponent(creator.name)}`} className="w-full mt-5">
+              <Link
+                href={`/allpromts?search=${encodeURIComponent(creator.name)}`}
+                className="w-full mt-5"
+              >
                 <Button
                   size="sm"
                   variant="outline"

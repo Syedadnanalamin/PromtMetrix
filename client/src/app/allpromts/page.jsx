@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { getAllpromts } from "@/lib/actions/promts/getallpromts";
 import PromtsExplorer from "@/components/Allpromts/PromtsExplorer";
 import { Sparkles } from "lucide-react";
@@ -9,16 +9,9 @@ export const metadata = {
 };
 
 const AllPromtsPage = async () => {
-  let prompts = [];
+  const result = await getAllpromts();
+  const prompts = result.filter((prompt) => prompt.status === "approved");
 
-  try {
-    const res = await getAllpromts();
-
-    prompts = Array.isArray(res) ? res : res?.data || [];
-  } catch (error) {
-    console.error("Failed to fetch prompts in AllPromtsPage:", error);
-    prompts = [];
-  }
 
   return (
     <div className="min-h-screen bg-background text-foreground py-10 px-4 sm:px-6 lg:px-8">
@@ -38,7 +31,16 @@ const AllPromtsPage = async () => {
         </div>
 
         {/* Interactive Search, Filter & Prompts Grid */}
-        <PromtsExplorer initialPrompts={prompts} />
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
+              <Sparkles className="h-5 w-5 animate-spin text-primary mr-2" />
+              Loading prompt explorer...
+            </div>
+          }
+        >
+          <PromtsExplorer initialPrompts={prompts} />
+        </Suspense>
       </div>
     </div>
   );

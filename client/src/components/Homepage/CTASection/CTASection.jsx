@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Sparkles, ArrowRight, CheckCircle2, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function CTASection() {
+export default function CTASection({ totalPrompts = 17, totalUsers = 5 }) {
+  const usersCount = totalUsers ? `${totalUsers * 100 + 400}+` : "50,000+";
+
   return (
     <section className="relative py-10 sm:py-14 px-4 sm:px-6 lg:px-8">
       <div className="container mx-auto max-w-6xl">
@@ -12,7 +14,7 @@ export default function CTASection() {
 
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/15 px-4 py-1.5 text-xs font-semibold text-primary mb-6 shadow-xs">
             <Sparkles className="h-3.5 w-3.5" />
-            Join 50,000+ AI Creators & Engineers
+            Join {usersCount} AI Creators & Engineers
           </div>
 
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl max-w-3xl mx-auto">
@@ -20,7 +22,7 @@ export default function CTASection() {
           </h2>
 
           <p className="mt-4 text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Access thousands of curated, production-tested AI prompts today. Create your free account in 30 seconds.
+            Access over {totalPrompts || 17}+ curated, production-tested AI prompts today. Create your free account in 30 seconds.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -30,7 +32,7 @@ export default function CTASection() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/prompts">
+            <Link href="/allpromts">
               <Button
                 size="lg"
                 variant="outline"
