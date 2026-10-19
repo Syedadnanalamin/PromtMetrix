@@ -1,9 +1,15 @@
 import React from 'react';
 import Sidebar from '@/components/dashboard/sidebar/Sidebar';
 import { getServerSession } from '@/lib/authentication/server.session';
+import { redirect } from 'next/navigation';
 
 export default async function DashboardLayout({ children }) {
   const session = await getServerSession();
+
+  if (!session) {
+
+    redirect("/login");
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-muted/20">

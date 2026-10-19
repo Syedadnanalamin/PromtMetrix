@@ -42,10 +42,19 @@ const getPromtbyuser = async (req, res) => {
 const getSinglePromt = async (req, res) => {
     const id = req.params.id;
 
-
     try {
         const singlePromt = await allPromtsCollection.findOne({ _id: new ObjectId(id) });
-        res.status(200).json(singlePromt);
+        const reviews = await reviewsCollection
+            .find({
+                $or: [
+                    { promptId: id },
+                    ...(ObjectId.isValid(id) ? [{ promptId: new ObjectId(id) }] : [])
+                ]
+            })
+            .sort({ _id: -1 })
+            .toArray();
+
+        res.status(200).json({ ...singlePromt, reviews });
     } catch (error) {
         console.error("Error getting prompt:", error);
         res.status(500).json({ message: "Failed to fetch prompt", error: error.message });

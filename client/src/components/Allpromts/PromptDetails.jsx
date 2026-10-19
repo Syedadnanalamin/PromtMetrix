@@ -241,22 +241,25 @@ export default function PromptDetails({ details, session: serverSession, promtid
       promptId: details?._id,
     };
 
-    const res = await promtsReviews(newRev);
+    try {
+      const res = await promtsReviews(newRev);
 
-    if (res?.success === true) {
-      setNotification({
-        type: "success",
-        title: "Review submitted",
-        message: "Your review has been successfully posted",
-      });
-    }
+      if (res?.success === true) {
+        setNotification({
+          type: "success",
+          title: "Review submitted",
+          message: "Your review has been successfully posted",
+        });
+      }
 
-    setTimeout(() => {
       setReviews([newRev, ...reviews]);
       setNewComment("");
       setNewRating(5);
+    } catch (error) {
+      console.error("Error submitting review:", error);
+    } finally {
       setIsSubmittingReview(false);
-    }, 400);
+    }
   };
 
   // Handle Report Submission
@@ -389,7 +392,12 @@ export default function PromptDetails({ details, session: serverSession, promtid
                 <div className="flex items-center gap-1.5">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                   <span>
-                    <strong className="text-foreground">4.9</strong> ({reviews.length} Reviews)
+                    <strong className="text-foreground">
+                      {reviews.length > 0
+                        ? (reviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0) / reviews.length).toFixed(1)
+                        : "5.0"}
+                    </strong>{" "}
+                    ({reviews.length} Reviews)
                   </span>
                 </div>
               </div>
@@ -401,11 +409,10 @@ export default function PromptDetails({ details, session: serverSession, promtid
               <button
                 type="button"
                 onClick={handleCopyPrompt}
-                className={`relative overflow-hidden group/copy flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold text-white transition-all duration-300 cursor-pointer active:scale-[0.98] ${
-                  copied
+                className={`relative overflow-hidden group/copy flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold text-white transition-all duration-300 cursor-pointer active:scale-[0.98] ${copied
                     ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-300/40"
                     : "bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:via-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 ring-1 ring-white/25 hover:-translate-y-0.5"
-                }`}
+                  }`}
               >
                 {/* Shimmer light-sweep effect */}
                 <span className="absolute inset-0 -translate-x-full group-hover/copy:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform ease-out pointer-events-none" />
@@ -428,11 +435,10 @@ export default function PromptDetails({ details, session: serverSession, promtid
                 type="button"
                 onClick={handleToggleBookmark}
                 disabled={isBookmarking}
-                className={`relative overflow-hidden group/bookmark flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer active:scale-[0.98] ${
-                  bookmarked
+                className={`relative overflow-hidden group/bookmark flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer active:scale-[0.98] ${bookmarked
                     ? "bg-gradient-to-r from-amber-500/15 via-primary/10 to-amber-500/15 border border-amber-500/40 text-amber-500 dark:text-amber-400 shadow-sm shadow-amber-500/20 hover:border-amber-500/60 hover:-translate-y-0.5"
                     : "bg-background/90 hover:bg-muted/80 dark:bg-card/90 text-foreground border border-border/80 hover:border-primary/50 shadow-xs hover:shadow-md hover:shadow-primary/10 hover:-translate-y-0.5"
-                }`}
+                  }`}
               >
                 {/* Shimmer on hover */}
                 <span className="absolute inset-0 -translate-x-full group-hover/bookmark:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-primary/10 to-transparent transition-transform ease-out pointer-events-none" />
@@ -456,11 +462,10 @@ export default function PromptDetails({ details, session: serverSession, promtid
                 type="button"
                 disabled={hasReported}
                 onClick={() => !hasReported && setIsReportModalOpen(true)}
-                className={`flex items-center justify-center gap-1.5 h-8.5 rounded-xl px-3 text-xs font-medium transition-all duration-200 ${
-                  hasReported
+                className={`flex items-center justify-center gap-1.5 h-8.5 rounded-xl px-3 text-xs font-medium transition-all duration-200 ${hasReported
                     ? "bg-rose-500/10 text-rose-500 border border-rose-500/20 font-semibold cursor-not-allowed shadow-2xs"
                     : "text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 cursor-pointer active:scale-95"
-                }`}
+                  }`}
               >
                 <Flag className={`h-3.5 w-3.5 ${hasReported ? "text-rose-500 fill-rose-500/30" : "transition-transform group-hover:scale-110"}`} />
                 <span>{hasReported ? "Reported" : "Report Prompt"}</span>
@@ -621,30 +626,38 @@ export default function PromptDetails({ details, session: serverSession, promtid
 
               {/* Reviews List */}
               <div className="space-y-3">
-                {reviews.map((rev, index) => (
-                  <div
-                    key={rev.id || rev._id || index}
-                    className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-[10px]">
-                          {(rev.name || "U").charAt(0).toUpperCase()}
+                {reviews.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic py-4 text-center rounded-xl border border-dashed border-border/60">
+                    No reviews yet. Be the first to leave a review!
+                  </p>
+                ) : (
+                  reviews.map((rev, index) => (
+                    <div
+                      key={rev.id || rev._id || index}
+                      className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-[10px]">
+                            {(rev.name || "U").charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-xs font-semibold text-foreground">{rev.name || "Anonymous User"}</span>
                         </div>
-                        <span className="text-xs font-semibold text-foreground">{rev.name || "Anonymous User"}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-0.5">
-                          {Array.from({ length: Number(rev.rating) || 5 }).map((_, i) => (
-                            <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
-                          ))}
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-0.5">
+                            {Array.from({ length: Number(rev.rating) || 5 }).map((_, i) => (
+                              <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            ))}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">
+                            {rev.date || (rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : "Just now")}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{rev.date || "Just now"}</span>
                       </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed pl-8">{rev.comment || rev.message}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed pl-8">{rev.comment || rev.message}</p>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -819,13 +832,12 @@ export default function PromptDetails({ details, session: serverSession, promtid
             <div className="flex items-center gap-3.5 px-4 py-3 sm:px-4.5 sm:py-3.5 rounded-2xl bg-[#202124] text-[#e8eaed] dark:bg-[#282a2d] dark:text-[#f1f3f4] border border-[#3c4043] shadow-2xl shadow-black/50 backdrop-blur-md min-w-[290px] max-w-[92vw] sm:max-w-md">
               {/* Google Material Icon Badge */}
               <div
-                className={`flex items-center justify-center h-9 w-9 rounded-full shrink-0 border ${
-                  notification.type === "error"
+                className={`flex items-center justify-center h-9 w-9 rounded-full shrink-0 border ${notification.type === "error"
                     ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
                     : notification.type === "info"
-                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                    : "bg-[#8ab4f8]/15 text-[#8ab4f8] border-[#8ab4f8]/30"
-                }`}
+                      ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                      : "bg-[#8ab4f8]/15 text-[#8ab4f8] border-[#8ab4f8]/30"
+                  }`}
               >
                 {notification.type === "error" ? (
                   <AlertTriangle className="h-4.5 w-4.5 text-rose-400" />
