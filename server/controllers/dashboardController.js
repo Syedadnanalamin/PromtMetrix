@@ -1,5 +1,5 @@
 const { ObjectId } = require("mongodb");
-const { allPromtsCollection, savedpromts, reviewsCollection, copiesCollection, subscriberCollection, userCollection, reportsCollection } = require("../config/db");
+const { allPromtsCollection, savedpromts, reviewsCollection, copiesCollection, subscriberCollection, userCollection, reportsCollection, reportedpromts } = require("../config/db");
 
 
 const getUserDashboardAnalytics = async (req, res) => {
@@ -161,9 +161,46 @@ const getAllSubscribers = async (req, res) => {
     }
 };
 
+const postReportPrompt = async (req, res) => {
+    try {
+        const { userId, promtId, promptId, report, reason, description, promptTitle } = req.body;
+
+        const targetPromptId = promtId || promptId;
+        const reportContent = report || description || reason || "Policy violation reported";
+
+        let title = promptTitle;
+        if (!title && targetPromptId) {
+            try {
+                const promptDoc = await allPromtsCollection.findOne(
+                    ObjectId.isValid(targetPromptId) ? { _id: new ObjectId(targetPromptId) } : { _id: targetPromptId }
+                );
+                title = promptDoc?.title || "";
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        const reportData = {
+            userId: userId || "anonymous",
+            promtId: targetPromptId,
+            promptId: targetPromptId,
+            report: reportContent,
+            reason: reason || reportContent,
+            promptTitle: title || "",
+            createdAt: new Date().toISOString()
+        };
+
+        const result = await reportedpromts.insertOne(reportData);
+        res.status(201).json({ success: true, message: "Report submitted successfully", result });
+    } catch (error) {
+        console.error("Error submitting report:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 const getAllReports = async (req, res) => {
     try {
-        const reports = await reportsCollection.find({}).sort({ _id: -1 }).toArray();
+        const reports = await reportedpromts.find({}).sort({ _id: -1 }).toArray();
         res.status(200).json(reports);
     } catch (error) {
         console.error("Error getting reports:", error);
@@ -178,11 +215,28 @@ const deleteReport = async (req, res) => {
             ? { $or: [{ _id: new ObjectId(id) }, { id }] }
             : { id };
 
-        await reportsCollection.deleteOne(query);
+        await reportedpromts.deleteOne(query);
         res.status(200).json({ success: true, message: "Report resolved" });
     } catch (error) {
         console.error("Error deleting report:", error);
         res.status(500).json({ success: false, message: "Failed to delete report", error: error.message });
+    }
+};
+
+const checkUserReported = async (req, res) => {
+    try {
+        const { userId, promptId } = req.query;
+        if (!userId || !promptId) {
+            return res.status(200).json({ reported: false });
+        }
+        const existing = await reportedpromts.findOne({
+            userId,
+            $or: [{ promtId: promptId }, { promptId }]
+        });
+        res.status(200).json({ reported: !!existing });
+    } catch (error) {
+        console.error("Error checking report:", error);
+        res.status(200).json({ reported: false });
     }
 };
 
@@ -196,5 +250,7 @@ module.exports = {
     deleteUser,
     getAllSubscribers,
     getAllReports,
-    deleteReport
+    deleteReport,
+    postReportPrompt,
+    checkUserReported
 }

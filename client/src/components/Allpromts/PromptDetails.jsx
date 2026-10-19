@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,8 @@ import {
   User,
   ShieldCheck,
   Tag,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -29,6 +31,7 @@ import { getClientSession } from "@/lib/authentication/client-session";
 import { savePromts } from "@/lib/actions/promts/savePromts";
 import { promtsReviews } from "@/lib/api/promts/promtsReviews";
 import { saveCopycount } from "@/lib/actions/promts/saveCopycount";
+import { postReportPromt, checkReportedStatus } from "@/lib/actions/promts/postReportPromt";
 
 // Difficulty badge color lookup
 const difficultyColors = {
@@ -37,7 +40,7 @@ const difficultyColors = {
   pro: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
-export default function PromptDetails({ details, session: serverSession, promtid }) {
+export default function PromptDetails({ details, session: serverSession, promtid, initialReported = false }) {
   const router = useRouter();
   const clientSession = getClientSession();
   const session = serverSession || clientSession;
@@ -50,6 +53,7 @@ export default function PromptDetails({ details, session: serverSession, promtid
   const [bookmarked, setBookmarked] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
   const [copyCount, setCopyCount] = useState(details?.copyCount || 0);
+  const [notification, setNotification] = useState(null);
 
   // Reviews state
   const [reviews, setReviews] = useState([
@@ -77,6 +81,37 @@ export default function PromptDetails({ details, session: serverSession, promtid
   const [reportReason, setReportReason] = useState("Inappropriate Content");
   const [reportDescription, setReportDescription] = useState("");
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [hasReported, setHasReported] = useState(initialReported);
+
+  // Keep reported state persistent on refresh
+  useEffect(() => {
+    if (initialReported) {
+      setHasReported(true);
+      return;
+    }
+
+    const targetPromptId = promtid || details?._id;
+    if (!targetPromptId) return;
+
+    if (typeof window !== "undefined") {
+      const isLocal = localStorage.getItem(`reported_${targetPromptId}`);
+      if (isLocal) {
+        setHasReported(true);
+      }
+      const isBookmarked = localStorage.getItem(`bookmarked_${targetPromptId}`);
+      if (isBookmarked) {
+        setBookmarked(true);
+      }
+    }
+
+    const currentUserId = user?.id || user?._id;
+    if (currentUserId) {
+      checkReportedStatus(currentUserId, targetPromptId).then((reported) => {
+        if (reported) setHasReported(true);
+      });
+    }
+  }, [initialReported, user, promtid, details]);
 
   const isPrivate = details?.visibility?.toLowerCase() === "private";
   const isPremiumUser = user?.subscription === "premium" || user?.plan === "pro" || user?.isPremium || user?.role === "admin" || user?.userType === "admin";
@@ -104,6 +139,15 @@ export default function PromptDetails({ details, session: serverSession, promtid
     }
   };
 
+  // Auto-dismiss Google notification snackbar after 4.5 seconds
+  useEffect(() => {
+    if (!notification) return;
+    const timer = setTimeout(() => {
+      setNotification(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [notification]);
+
   // Handle Bookmark Toggle
   const handleToggleBookmark = async () => {
     if (!isLoggedIn) {
@@ -112,6 +156,19 @@ export default function PromptDetails({ details, session: serverSession, promtid
     }
 
     if (isBookmarking) return;
+
+    const targetPromptId = promtid || details?._id;
+
+    if (bookmarked) {
+      setNotification({
+        type: "info",
+        title: "Already bookmarked",
+        message: "This prompt is already saved in your bookmarks",
+        actionText: "View Bookmarks",
+        actionHref: "/dashboard/savedpromts",
+      });
+      return;
+    }
 
     const data = {
       userId: user?.id || user?._id,
@@ -133,10 +190,30 @@ export default function PromptDetails({ details, session: serverSession, promtid
 
       if (res?.success === true) {
         setBookmarked(true);
-        alert("Promt added to the bookmark list");
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`bookmarked_${targetPromptId}`, "true");
+        }
+        setNotification({
+          type: "success",
+          title: "Prompt saved to bookmarks",
+          message: details?.title ? `"${details.title.slice(0, 32)}..." saved` : "Added to your saved collection",
+          actionText: "View Bookmarks",
+          actionHref: "/dashboard/savedpromts",
+        });
+      } else {
+        setNotification({
+          type: "error",
+          title: "Bookmark failed",
+          message: res?.message || "There was an error saving this prompt",
+        });
       }
     } catch (error) {
       console.error("Error saving prompt:", error);
+      setNotification({
+        type: "error",
+        title: "Bookmark error",
+        message: "Failed to connect to server. Please try again.",
+      });
     } finally {
       setIsBookmarking(false);
     }
@@ -167,7 +244,11 @@ export default function PromptDetails({ details, session: serverSession, promtid
     const res = await promtsReviews(newRev);
 
     if (res?.success === true) {
-      alert("Review added successfully");
+      setNotification({
+        type: "success",
+        title: "Review submitted",
+        message: "Your review has been successfully posted",
+      });
     }
 
     setTimeout(() => {
@@ -179,14 +260,36 @@ export default function PromptDetails({ details, session: serverSession, promtid
   };
 
   // Handle Report Submission
-  const handleReportSubmit = (e) => {
+  const handleReportSubmit = async (e) => {
     e.preventDefault();
-    setReportSubmitted(true);
-    setTimeout(() => {
-      setIsReportModalOpen(false);
-      setReportSubmitted(false);
-      setReportDescription("");
-    }, 1500);
+    setIsSubmittingReport(true);
+
+    try {
+      const data = {
+        userId: user?.id || user?._id || "anonymous",
+        promtId: promtid || details?._id,
+        report: reportDescription ? `${reportReason}: ${reportDescription}` : reportReason,
+        reason: reportReason,
+        description: reportDescription,
+        promptTitle: details?.title || "",
+      };
+
+      await postReportPromt(data);
+      setHasReported(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`reported_${promtid || details?._id}`, "true");
+      }
+      setReportSubmitted(true);
+      setTimeout(() => {
+        setIsReportModalOpen(false);
+        setReportSubmitted(false);
+        setReportDescription("");
+        setIsSubmittingReport(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Error submitting report:", err);
+      setIsSubmittingReport(false);
+    }
   };
 
   const difficultyStyle =
@@ -292,52 +395,76 @@ export default function PromptDetails({ details, session: serverSession, promtid
               </div>
             </div>
 
-            {/* Quick Action Buttons */}
-            <div className="flex flex-row lg:flex-col gap-3 min-w-[190px]">
-              <Button
+            {/* Quick Action Buttons (Premium Glassmorphism Panel) */}
+            <div className="flex flex-row lg:flex-col gap-2.5 min-w-[210px] sm:min-w-[230px] p-2.5 rounded-2xl bg-card/60 dark:bg-card/40 backdrop-blur-xl border border-border/70 shadow-xl shadow-black/5 dark:shadow-black/25">
+              {/* 1. Primary Action: Copy Prompt */}
+              <button
+                type="button"
                 onClick={handleCopyPrompt}
-                className="ai-glow-button flex-1 text-white border-0 gap-2 h-11 text-sm font-semibold shadow-md cursor-pointer"
+                className={`relative overflow-hidden group/copy flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold text-white transition-all duration-300 cursor-pointer active:scale-[0.98] ${
+                  copied
+                    ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-300/40"
+                    : "bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:via-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 ring-1 ring-white/25 hover:-translate-y-0.5"
+                }`}
               >
+                {/* Shimmer light-sweep effect */}
+                <span className="absolute inset-0 -translate-x-full group-hover/copy:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform ease-out pointer-events-none" />
+
                 {copied ? (
                   <>
-                    <Check className="h-4 w-4 text-emerald-300" />
-                    <span>Copied!</span>
+                    <Check className="h-4 w-4 text-emerald-100 animate-in zoom-in-75 duration-200" />
+                    <span className="tracking-wide">Prompt Copied!</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="h-4 w-4" />
-                    <span>Copy Prompt</span>
+                    <Copy className="h-4 w-4 transition-transform group-hover/copy:scale-110 duration-200" />
+                    <span className="tracking-wide">Copy Prompt</span>
                   </>
                 )}
-              </Button>
+              </button>
 
-              <Button
-                variant="outline"
+              {/* 2. Secondary Action: Bookmark */}
+              <button
+                type="button"
                 onClick={handleToggleBookmark}
-                className="flex-1 gap-2 h-11 border-border/80 hover:bg-accent text-sm font-medium cursor-pointer"
+                disabled={isBookmarking}
+                className={`relative overflow-hidden group/bookmark flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer active:scale-[0.98] ${
+                  bookmarked
+                    ? "bg-gradient-to-r from-amber-500/15 via-primary/10 to-amber-500/15 border border-amber-500/40 text-amber-500 dark:text-amber-400 shadow-sm shadow-amber-500/20 hover:border-amber-500/60 hover:-translate-y-0.5"
+                    : "bg-background/90 hover:bg-muted/80 dark:bg-card/90 text-foreground border border-border/80 hover:border-primary/50 shadow-xs hover:shadow-md hover:shadow-primary/10 hover:-translate-y-0.5"
+                }`}
               >
+                {/* Shimmer on hover */}
+                <span className="absolute inset-0 -translate-x-full group-hover/bookmark:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-primary/10 to-transparent transition-transform ease-out pointer-events-none" />
+
                 {bookmarked ? (
                   <>
-                    <BookmarkCheck className="h-4 w-4 text-primary" />
-                    <span className="text-primary font-semibold">Bookmarked</span>
+                    <BookmarkCheck className="h-4 w-4 text-amber-500 dark:text-amber-400 fill-amber-400/20" />
+                    <span className="font-semibold tracking-wide">Bookmarked</span>
+                    <Sparkles className="h-3 w-3 text-amber-400 ml-0.5 animate-pulse" />
                   </>
                 ) : (
                   <>
-                    <Bookmark className="h-4 w-4 text-muted-foreground" />
-                    <span>Bookmark</span>
+                    <Bookmark className="h-4 w-4 text-muted-foreground group-hover/bookmark:text-primary transition-colors" />
+                    <span className="tracking-wide">{isBookmarking ? "Saving..." : "Bookmark"}</span>
                   </>
                 )}
-              </Button>
+              </button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsReportModalOpen(true)}
-                className="text-xs text-muted-foreground hover:text-destructive gap-1.5 justify-center cursor-pointer"
+              {/* 3. Tertiary Action: Report */}
+              <button
+                type="button"
+                disabled={hasReported}
+                onClick={() => !hasReported && setIsReportModalOpen(true)}
+                className={`flex items-center justify-center gap-1.5 h-8.5 rounded-xl px-3 text-xs font-medium transition-all duration-200 ${
+                  hasReported
+                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/20 font-semibold cursor-not-allowed shadow-2xs"
+                    : "text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 cursor-pointer active:scale-95"
+                }`}
               >
-                <Flag className="h-3.5 w-3.5" />
-                Report Prompt
-              </Button>
+                <Flag className={`h-3.5 w-3.5 ${hasReported ? "text-rose-500 fill-rose-500/30" : "transition-transform group-hover:scale-110"}`} />
+                <span>{hasReported ? "Reported" : "Report Prompt"}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -391,11 +518,15 @@ export default function PromptDetails({ details, session: serverSession, promtid
                           This is a private creator prompt. Unlock lifetime access to all premium prompts for only $5.
                         </p>
                       </div>
-                      <Link href="/subscribe">
-                        <Button className="w-full ai-glow-button text-white border-0 font-semibold text-xs h-10 shadow-md">
-                          <Sparkles className="h-4 w-4 mr-1.5" />
-                          Subscribe for $5 Lifetime Access
-                        </Button>
+                      <Link href="/subscribe" className="block w-full">
+                        <button
+                          type="button"
+                          className="relative overflow-hidden group/sub w-full flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-amber-500 via-violet-600 to-indigo-600 hover:from-amber-400 hover:via-violet-500 hover:to-indigo-500 shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-primary/30 ring-1 ring-white/25 transition-all duration-300 cursor-pointer active:scale-[0.98]"
+                        >
+                          <span className="absolute inset-0 -translate-x-full group-hover/sub:translate-x-full duration-1000 bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform ease-out pointer-events-none" />
+                          <Sparkles className="h-4 w-4 text-amber-200 animate-pulse" />
+                          <span>Subscribe for $5 Lifetime Access</span>
+                        </button>
                       </Link>
                     </div>
                   </div>
@@ -478,15 +609,14 @@ export default function PromptDetails({ details, session: serverSession, promtid
                   className="w-full rounded-xl border border-border/70 bg-background/80 p-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
                 />
 
-                <Button
+                <button
                   type="submit"
-                  size="sm"
                   disabled={!isLoggedIn || isSubmittingReview || !newComment.trim()}
-                  className="ai-glow-button text-white border-0 text-xs gap-1.5 cursor-pointer"
+                  className="relative overflow-hidden group/submit inline-flex items-center gap-2 h-10 px-5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-500 hover:via-indigo-500 hover:to-purple-500 shadow-md shadow-indigo-500/25 ring-1 ring-white/20 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-95"
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  {isSubmittingReview ? "Submitting..." : "Post Review"}
-                </Button>
+                  <Send className="h-3.5 w-3.5 transition-transform group-hover/submit:translate-x-0.5" />
+                  <span>{isSubmittingReview ? "Submitting..." : "Post Review"}</span>
+                </button>
               </form>
 
               {/* Reviews List */}
@@ -667,13 +797,78 @@ export default function PromptDetails({ details, session: serverSession, promtid
                     <Button
                       type="submit"
                       size="sm"
+                      disabled={isSubmittingReport}
                       className="bg-destructive text-white hover:bg-destructive/90 text-xs cursor-pointer"
                     >
-                      Submit Report
+                      {isSubmittingReport ? "Submitting..." : "Submit Report"}
                     </Button>
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Google Material Design Notification / Snackbar */}
+        {notification && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 sm:left-6 sm:translate-x-0 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300 pointer-events-auto"
+          >
+            <div className="flex items-center gap-3.5 px-4 py-3 sm:px-4.5 sm:py-3.5 rounded-2xl bg-[#202124] text-[#e8eaed] dark:bg-[#282a2d] dark:text-[#f1f3f4] border border-[#3c4043] shadow-2xl shadow-black/50 backdrop-blur-md min-w-[290px] max-w-[92vw] sm:max-w-md">
+              {/* Google Material Icon Badge */}
+              <div
+                className={`flex items-center justify-center h-9 w-9 rounded-full shrink-0 border ${
+                  notification.type === "error"
+                    ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                    : notification.type === "info"
+                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                    : "bg-[#8ab4f8]/15 text-[#8ab4f8] border-[#8ab4f8]/30"
+                }`}
+              >
+                {notification.type === "error" ? (
+                  <AlertTriangle className="h-4.5 w-4.5 text-rose-400" />
+                ) : notification.type === "info" ? (
+                  <Bookmark className="h-4.5 w-4.5 text-amber-400" />
+                ) : (
+                  <BookmarkCheck className="h-4.5 w-4.5 text-[#8ab4f8]" />
+                )}
+              </div>
+
+              {/* Text content */}
+              <div className="flex-1 min-w-0 pr-1">
+                <p className="text-xs font-semibold text-white tracking-tight leading-snug truncate">
+                  {notification.title}
+                </p>
+                {notification.message && (
+                  <p className="text-[11px] text-[#9aa0a6] leading-tight truncate">
+                    {notification.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Button (e.g. View Bookmarks) */}
+              {notification.actionHref && (
+                <Link
+                  href={notification.actionHref}
+                  onClick={() => setNotification(null)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#8ab4f8] hover:text-[#aecbfa] hover:bg-[#8ab4f8]/10 transition-colors shrink-0 uppercase tracking-wider"
+                >
+                  <span>{notification.actionText || "View"}</span>
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              )}
+
+              {/* Dismiss Button */}
+              <button
+                type="button"
+                onClick={() => setNotification(null)}
+                aria-label="Dismiss notification"
+                className="p-1 text-[#9aa0a6] hover:text-white rounded-full hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
         )}

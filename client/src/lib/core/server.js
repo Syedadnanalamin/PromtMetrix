@@ -1,3 +1,14 @@
+import { getUserToken } from "../authentication/server.session";
+
+
+const authHeader = async () => {
+    const token = await getUserToken();
+    if (!token) return {};
+    return {
+        Authorization: `Bearer ${token}`,
+    };
+}
+
 export const serverGet = async (url) => {
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api${url}`);
@@ -6,6 +17,19 @@ export const serverGet = async (url) => {
 }
 
 
+export const protectedGet = async (url) => {
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api${url}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...await authHeader()
+        },
+    });
+
+    return res.json();
+}
+
 
 
 export const serverPost = async (url, data) => {
@@ -13,7 +37,8 @@ export const serverPost = async (url, data) => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api${url}`, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...await authHeader()
         },
         body: JSON.stringify(data)
     });
@@ -29,7 +54,8 @@ export const serverDelete = async (url) => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api${url}`, {
         method: "DELETE",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...await authHeader()
         },
     });
 
@@ -41,7 +67,8 @@ export const serverPut = async (url, data) => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api${url}`, {
         method: "PUT",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            ...await authHeader()
         },
         body: JSON.stringify(data)
     });

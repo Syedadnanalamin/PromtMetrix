@@ -37,6 +37,8 @@ export default function AdminReports({ initialReports = [] }) {
         (r) =>
           (r.promptTitle || "").toLowerCase().includes(q) ||
           (r.reason || "").toLowerCase().includes(q) ||
+          (r.report || "").toLowerCase().includes(q) ||
+          (r.userId || "").toLowerCase().includes(q) ||
           (r.reporter || "").toLowerCase().includes(q)
       );
     }
@@ -183,7 +185,7 @@ export default function AdminReports({ initialReports = [] }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredReports.map((report) => {
             const rId = report._id?.toString() || report.id;
-            const pId = report.promptId;
+            const pId = report.promtId || report.promptId;
             return (
               <div
                 key={rId}
@@ -195,28 +197,29 @@ export default function AdminReports({ initialReports = [] }) {
                       Flagged
                     </span>
                     <h4 className="text-sm font-bold text-foreground line-clamp-1">
-                      {report.promptTitle || "Reported Prompt"}
+                      {report.promptTitle || (pId ? `Prompt ID: ${pId}` : "Untitled Prompt")}
                     </h4>
                   </div>
                   {pId && (
                     <Link
                       href={`/allpromts/${pId}`}
                       target="_blank"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-0.5"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1 font-medium"
                     >
+                      <span>View</span>
                       <ExternalLink className="h-3 w-3" />
                     </Link>
                   )}
                 </div>
 
                 <div className="p-3 rounded-xl bg-card/60 border border-border/60 text-xs space-y-1">
-                  <p className="font-semibold text-foreground">Reason for Flag:</p>
-                  <p className="text-muted-foreground">{report.reason || "Policy violation reported"}</p>
+                  <p className="font-semibold text-foreground">Report Reason & Details:</p>
+                  <p className="text-muted-foreground break-words">{report.report || report.reason || "Policy violation reported"}</p>
                 </div>
 
                 <div className="pt-2 border-t border-rose-500/20 flex items-center justify-between text-xs">
                   <span className="text-[11px] text-muted-foreground">
-                    Reported by {report.reporter || "Anonymous User"}
+                    Reported by: <span className="font-mono text-foreground/80">{report.userId || report.reporter || "Anonymous User"}</span>
                   </span>
 
                   <div className="flex items-center gap-2">

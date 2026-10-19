@@ -1,4 +1,4 @@
-import { serverGet, serverDelete } from "@/lib/core/server";
+import { serverGet, serverDelete, serverPost } from "@/lib/core/server";
 
 export const getAllReports = async () => {
     const res = await serverGet("/dashboard/reports");
@@ -7,5 +7,10 @@ export const getAllReports = async () => {
 
 export const deleteReport = async (reportId) => {
     const res = await serverDelete(`/dashboard/reports/${reportId}`);
+    return res;
+};
+
+export const postReportPrompt = async (data) => {
+    const res = await serverPost("/dashboard/reports", data);
     return res;
 };

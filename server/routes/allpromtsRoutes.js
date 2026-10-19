@@ -15,8 +15,13 @@ const {
     getAllReviews,
     getTopCreators
 } = require('../controllers/allPromtsController');
+const { postReportPrompt } = require('../controllers/dashboardController');
 
-// gettin all promts
+
+const verifyToken = require("../middlewares/authMiddleware");
+const { verifyAdmin, verifyCreator } = require("../middlewares/authUser");
+
+// gettin all promts (public)
 router.get("/", getAllpromts);
 
 // public all reviews for homepage/feed
@@ -30,24 +35,25 @@ router.get("/byuser/:id", getPromtbyuser);
 
 // user reviews routes (must be before /:id)
 router.get("/reviews/byuser/:id", getReviewsByUser);
-router.put("/reviews/:id", updateReview);
-router.delete("/reviews/:id", deleteReview);
+router.put("/reviews/:id", verifyToken, updateReview);
+router.delete("/reviews/:id", verifyToken, deleteReview);
 
 // update prompt status (approve / reject)
-router.put("/:id/status", updatePromptStatus);
+router.put("/:id/status", verifyToken, verifyAdmin, updatePromptStatus);
 
 // getting individual promts info
 router.get("/:id", getSinglePromt);
 
 // delete single prompt
-router.delete("/:id", deleteSinglePromt);
+router.delete("/:id", verifyToken, deleteSinglePromt);
 
 // add new promts
-router.post("/add-prompt", postAddPromt);
+router.post("/add-prompt", verifyToken, verifyCreator, postAddPromt);
 
 // adding review to the promt
-router.post("/review", postPromtReviews);
+router.post("/review", verifyToken, postPromtReviews);
 router.post("/copycount", saveCopycount);
+router.post("/report", postReportPrompt);
 
 
 module.exports = router;

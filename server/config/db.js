@@ -28,7 +28,10 @@ const reviewsCollection = db.collection("reviews");
 const copiesCollection = db.collection("promptCopies");
 const subscriberCollection = db.collection("subscribers");
 const userCollection = db.collection("user");
-const reportsCollection = db.collection("reports");
+const reportedpromts = db.collection("reportedpromts");
+const reportsCollection = reportedpromts;
+const session = db.collection("session");
+const users = db.collection("user");
 
 module.exports = {
   connectDB,
@@ -40,5 +43,8 @@ module.exports = {
   copiesCollection,
   subscriberCollection,
   userCollection,
-  reportsCollection
+  reportsCollection,
+  reportedpromts,
+  session,
+  users
 };
