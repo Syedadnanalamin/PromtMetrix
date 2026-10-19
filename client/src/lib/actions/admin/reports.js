@@ -1,7 +1,7 @@
-import { serverGet, serverDelete, serverPost } from "@/lib/core/server";
+import { protectedGet, serverDelete, serverPost } from "@/lib/core/server";
 
 export const getAllReports = async () => {
-    const res = await serverGet("/dashboard/reports");
+    const res = await protectedGet("/dashboard/reports");
     return res;
 };
 

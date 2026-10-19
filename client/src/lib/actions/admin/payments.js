@@ -1,6 +1,6 @@
-import { serverGet } from "@/lib/core/server";
+import { protectedGet } from "@/lib/core/server";
 
 export const getAllPayments = async () => {
-    const res = await serverGet("/dashboard/subscribers");
+    const res = await protectedGet("/dashboard/subscribers");
     return res;
 };
