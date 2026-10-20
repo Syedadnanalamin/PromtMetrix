@@ -82,11 +82,12 @@ export default function Addpromts({ session: propSession, isLimitReached: propIs
     const payload = {
       ...formData,
       tags,
+      userId: user?.id || user?._id || "",
       creator: {
         name: user?.name || "Anonymous Creator",
         email: user?.email || "",
         image: user?.image || user?.photoURL || "",
-        userId: user?.id || "",
+        userId: user?.id || user?._id || "",
       },
       copyCount: 0,
       status: "pending",

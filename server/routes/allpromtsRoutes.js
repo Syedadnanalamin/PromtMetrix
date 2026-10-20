@@ -48,7 +48,7 @@ router.get("/:id", getSinglePromt);
 router.delete("/:id", verifyToken, deleteSinglePromt);
 
 // add new promts
-router.post("/add-prompt", verifyToken, verifyCreator, postAddPromt);
+router.post("/add-prompt", verifyToken, postAddPromt);
 
 // adding review to the promt
 router.post("/review", verifyToken, postPromtReviews);
